@@ -1,13 +1,13 @@
 
-import {
-    FaceLandmarker,
-    FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
+// Keep the browser module and WASM files on the same published release.
+const MEDIAPIPE_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21";
 
 const video = document.getElementById("webcam");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const status = document.getElementById("status");
+const startButton = document.getElementById("startBtn");
+startButton.disabled = true;
 
 let stream = null;
 let faceLandmarker = null;
@@ -18,8 +18,12 @@ async function loadMediaPipe() {
     try {
         status.textContent = "Loading MediaPipe...";
 
+        const { FaceLandmarker, FilesetResolver } = await import(
+            `${MEDIAPIPE_BASE}/vision_bundle.mjs`
+        );
+
         const vision = await FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+            `${MEDIAPIPE_BASE}/wasm`
         );
 
         faceLandmarker = await FaceLandmarker.createFromOptions(
@@ -36,8 +40,9 @@ async function loadMediaPipe() {
         );
 
         status.textContent = "MediaPipe ready";
+        startButton.disabled = false;
     } catch (error) {
-        status.textContent = "MediaPipe failed to load";
+        status.textContent = `MediaPipe failed to load: ${error.message}. Check your connection and reload.`;
         console.error(error);
     }
 }
