@@ -1,5 +1,4 @@
 
-
 import {
     FaceLandmarker,
     FilesetResolver
@@ -14,10 +13,42 @@ let stream = null;
 let faceLandmarker = null;
 let running = false;
 
+// Start camera first
+window.startCamera = async function() {
+    try {
+        status.innerText = "Starting camera...";
+
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        running = true;
+        status.innerText = "Camera started! Loading MediaPipe...";
+
+        // Start webcam before loading MediaPipe
+        detectFace();
+
+        if (!faceLandmarker) {
+            await loadMediaPipe();
+        }
+
+        status.innerText = "Face tracking is running";
+
+    } catch (error) {
+        console.error(error);
+        status.innerText = "Error: " + error.message;
+    }
+};
+
 // Load MediaPipe
 async function loadMediaPipe() {
-    status.innerText = "Loading MediaPipe...";
-
     const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
     );
@@ -35,68 +66,40 @@ async function loadMediaPipe() {
     );
 }
 
-// Start webcam
-window.startCamera = async function() {
-    if (running) return;
-
-    try {
-        if (!faceLandmarker) {
-            await loadMediaPipe();
-        }
-
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false
-        });
-
-        video.srcObject = stream;
-        await video.play();
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        running = true;
-        status.innerText = "Face tracking is running";
-
-        detectFace();
-
-    } catch (error) {
-        status.innerText = "Error: " + error.message;
-        stopCamera();
-    }
-};
-
-// Detect face landmarks
+// Detect landmarks
 function detectFace() {
     if (!running) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const results = faceLandmarker.detectForVideo(
-        video,
-        performance.now()
-    );
+    if (faceLandmarker && video.readyState >= 2) {
 
-    if (results.faceLandmarks.length > 0) {
+        const results = faceLandmarker.detectForVideo(
+            video,
+            performance.now()
+        );
 
-        const landmarks = results.faceLandmarks[0];
+        if (results.faceLandmarks.length > 0) {
 
-        for (let i = 0; i < landmarks.length; i++) {
+            const landmarks = results.faceLandmarks[0];
 
-            let x = landmarks[i].x * canvas.width;
-            let y = landmarks[i].y * canvas.height;
+            for (let i = 0; i < landmarks.length; i++) {
 
-            ctx.beginPath();
-            ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-            ctx.fillStyle = "#00ff88";
-            ctx.fill();
+                let x = landmarks[i].x * canvas.width;
+                let y = landmarks[i].y * canvas.height;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+                ctx.fillStyle = "#00ff88";
+                ctx.fill();
+            }
         }
     }
 
     requestAnimationFrame(detectFace);
 }
 
-// Stop webcam
+// Stop camera
 window.stopCamera = function() {
     running = false;
 
@@ -110,3 +113,4 @@ window.stopCamera = function() {
 
     status.innerText = "Camera is off";
 };
+
