@@ -2,20 +2,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Webcam Mirror</title>
+    <title>MediaPipe Webcam</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Webcam Mirror</h1>
+    <h1>MediaPipe Face Tracking</h1>
+    <p id="status">Loading MediaPipe...</p>
 
-    <video id="webcam" autoplay playsinline muted></video>
-
-    <br>
+    <div class="camera">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+    </div>
 
     <button id="startBtn">Start Camera</button>
     <button id="stopBtn">Stop Camera</button>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
