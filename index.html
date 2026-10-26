@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MediaPipe Webcam</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -17,6 +18,22 @@
 
     <button id="startBtn" disabled>Start Camera</button>
     <button id="stopBtn">Stop Camera</button>
+
+    <section class="meters" aria-label="Live meters">
+        <div class="meter-card">
+            <label for="mouthMeter">Mouth opening <output id="mouthValue">0%</output></label>
+            <meter id="mouthMeter" min="0" max="100" value="0">0%</meter>
+            <p id="mouthStatus">Start the camera to track your mouth.</p>
+        </div>
+        <div class="meter-card">
+            <label for="screamMeter">Scream meter <output id="screamValue">0%</output></label>
+            <meter id="screamMeter" min="0" max="100" low="35" high="75" optimum="0" value="0">0%</meter>
+            <p id="micStatus" role="status">Enable your microphone to measure loudness.</p>
+            <button id="micBtn">Enable Microphone</button>
+            <label for="sensitivity">Sensitivity <input id="sensitivity" type="range" min="1" max="5" step="0.1" value="2"></label>
+        </div>
+        <p class="meter-note">The scream meter measures sound volume, including background noise. Audio stays in your browser and is not recorded.</p>
+    </section>
 
     <script type="module" src="script.js"></script>
 </body>
