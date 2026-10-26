@@ -85,36 +85,58 @@ async function loadMediaPipe() {
     loading = false;
 }
 
-// Draw face landmarks
+
+let lastVideoTime = -1;
+
 function detectFace() {
     if (!running) return;
+
+    // Match canvas size to webcam
+    if (canvas.width !== video.videoWidth ||
+        canvas.height !== video.videoHeight) {
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (faceLandmarker && video.readyState >= 2) {
-        try {
+
+        // Only process new video frames
+        if (video.currentTime !== lastVideoTime) {
+
+            lastVideoTime = video.currentTime;
+
             const results = faceLandmarker.detectForVideo(
                 video,
                 performance.now()
             );
 
+            console.log("Faces found:", results.faceLandmarks.length);
+
             if (results.faceLandmarks.length > 0) {
+
                 const landmarks = results.faceLandmarks[0];
 
+                statusText.innerText =
+                    "Face detected! Landmarks: " + landmarks.length;
+
+                // Draw green landmark dots
                 for (let i = 0; i < landmarks.length; i++) {
+
                     let x = landmarks[i].x * canvas.width;
                     let y = landmarks[i].y * canvas.height;
 
                     ctx.beginPath();
-                    ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-                    ctx.fillStyle = "#00ff88";
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#00ff00";
                     ctx.fill();
                 }
+
+            } else {
+                statusText.innerText = "No face detected";
             }
-        } catch (error) {
-            console.error("Detection error:", error);
-            faceLandmarker = null;
-            statusText.innerText = "Face tracking stopped. Camera still works.";
         }
     }
 
