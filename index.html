@@ -24,6 +24,9 @@
             <label for="mouthMeter">Mouth opening <output id="mouthValue">0%</output></label>
             <meter id="mouthMeter" min="0" max="100" value="0">0%</meter>
             <p id="mouthStatus">Start the camera to track your mouth.</p>
+            <button id="mouthClosedBtn" disabled>Set closed mouth (0%)</button>
+            <button id="mouthOpenBtn" disabled>Set wide open (100%)</button>
+            <p id="mouthCalibration" role="status">For better accuracy, hold your mouth closed briefly and set 0%, then open wide and set 100%. Calibration lasts until you reload.</p>
         </div>
         <div class="meter-card">
             <label for="screamMeter">Scream meter <output id="screamValue">0%</output></label>

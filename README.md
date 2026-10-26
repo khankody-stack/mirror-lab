@@ -11,7 +11,11 @@ The module, WASM runtime, and face model require an internet connection.
 If loading fails, the page displays the error; check failed requests in the
 browser's Network panel and reload after resolving the connection issue.
 
-The mouth meter uses MediaPipe's jaw-open expression score. Enable Microphone
+The mouth meter smooths MediaPipe's jaw-open expression score and shows tenths
+of a percent. For a personal range, hold your mouth closed briefly and click
+Set closed mouth, then hold it wide open and click Set wide open. Calibration
+averages recent readings and lasts until reload; percentages describe your
+calibrated expression range, not a physical distance. Enable Microphone
 for the scream meter, which measures relative loudness (not calibrated decibels
 or scream recognition). Adjust Sensitivity for your microphone. Audio is
 processed locally without recording or speaker playback. Stop Camera releases

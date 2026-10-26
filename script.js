@@ -23,9 +23,63 @@ let audioFrame = null;
 let micRequest = 0;
 let screamLevel = 0;
 const micButton = document.getElementById("micBtn");
+const mouthClosedButton = document.getElementById("mouthClosedBtn");
+const mouthOpenButton = document.getElementById("mouthOpenBtn");
+let mouthClosed = 0;
+let mouthOpen = 1;
+let mouthSamples = [];
+let mouthSmoothed = null;
+let mouthLastTime = null;
+
+function resetMouthTracking() {
+    mouthSamples = [];
+    mouthSmoothed = null;
+    mouthLastTime = null;
+    mouthClosedButton.disabled = true;
+    mouthOpenButton.disabled = true;
+    setMeter("mouth", 0);
+}
+
+function updateMouthMeter(score, now) {
+    if (!Number.isFinite(score)) {
+        resetMouthTracking();
+        document.getElementById("mouthStatus").textContent = "No face detected";
+        return;
+    }
+    mouthSamples.push({ score, time: now });
+    mouthSamples = mouthSamples.filter(sample => now - sample.time <= 350);
+    const ready = mouthSamples.length >= 3 && now - mouthSamples[0].time >= 200;
+    mouthClosedButton.disabled = !ready;
+    mouthOpenButton.disabled = !ready;
+    // Time-based smoothing reduces jitter without depending on camera frame rate.
+    const alpha = mouthLastTime === null ? 1 : 1 - Math.exp(-(now - mouthLastTime) / 70);
+    mouthSmoothed = mouthSmoothed === null ? score : mouthSmoothed + alpha * (score - mouthSmoothed);
+    mouthLastTime = now;
+    setMeter("mouth", 100 * (mouthSmoothed - mouthClosed) / (mouthOpen - mouthClosed));
+    document.getElementById("mouthStatus").textContent = "Tracking mouth opening";
+}
+
+function calibrateMouth(endpoint) {
+    if (!running || mouthSamples.length < 3 || performance.now() - mouthSamples.at(-1).time > 250) return;
+    const average = mouthSamples.reduce((sum, sample) => sum + sample.score, 0) / mouthSamples.length;
+    const closed = endpoint === "closed" ? average : mouthClosed;
+    const open = endpoint === "open" ? average : mouthOpen;
+    if (open - closed < 0.1) {
+        document.getElementById("mouthCalibration").textContent = "Keep your mouth closed for 0%, or open wider for 100%, then try again.";
+        return;
+    }
+    mouthClosed = closed;
+    mouthOpen = open;
+    mouthSmoothed = average;
+    setMeter("mouth", 100 * (average - closed) / (open - closed));
+    document.getElementById("mouthCalibration").textContent = endpoint === "closed"
+        ? "Closed mouth saved. Now hold your mouth wide open briefly and set 100%."
+        : "Wide open saved. You can recalibrate either endpoint anytime.";
+}
 
 function setMeter(name, value) {
-    const percent = Math.round(Math.max(0, Math.min(100, value)));
+    const clamped = Math.max(0, Math.min(100, value));
+    const percent = name === "mouth" ? clamped.toFixed(1) : Math.round(clamped);
     document.getElementById(`${name}Meter`).value = percent;
     document.getElementById(`${name}Value`).textContent = `${percent}%`;
 }
@@ -187,9 +241,10 @@ function detectFace() {
             performance.now()
         );
 
-        const jawOpen = results.faceBlendshapes?.[0]?.categories.find(category => category.categoryName === "jawOpen")?.score ?? 0;
-        setMeter("mouth", jawOpen * 100);
-        document.getElementById("mouthStatus").textContent = results.faceLandmarks.length ? "Open your mouth to fill the meter." : "No face detected";
+        const jawOpen = results.faceLandmarks.length
+            ? results.faceBlendshapes?.[0]?.categories.find(category => category.categoryName === "jawOpen")?.score
+            : undefined;
+        updateMouthMeter(jawOpen, performance.now());
 
         for (const face of results.faceLandmarks) {
             for (const point of face) {
@@ -214,7 +269,7 @@ function stopCamera() {
     running = false;
     cancelAnimationFrame(animationFrame);
     stopMicrophone();
-    setMeter("mouth", 0);
+    resetMouthTracking();
     document.getElementById("mouthStatus").textContent = "Camera stopped";
 
     if (stream) {
@@ -236,4 +291,6 @@ document.getElementById("stopBtn")
 
 loadMediaPipe();
 micButton.addEventListener("click", toggleMicrophone);
+mouthClosedButton.addEventListener("click", () => calibrateMouth("closed"));
+mouthOpenButton.addEventListener("click", () => calibrateMouth("open"));
 window.addEventListener("pagehide", stopCamera);
