@@ -11,13 +11,30 @@ h1 {
     color: #00ff88;
 }
 
-video {
+.camera-box {
+    position: relative;
     width: 80%;
     max-width: 700px;
+    margin: auto;
+}
+
+video {
+    width: 100%;
+    display: block;
     border: 3px solid #9146ff;
     border-radius: 12px;
+    box-sizing: border-box;
     transform: scaleX(-1);
-    background-color: black;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    pointer-events: none;
 }
 
 button {
