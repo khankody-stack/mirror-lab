@@ -45,14 +45,17 @@ async function startCamera() {
 }
 
 // Load MediaPipe
+
 async function loadMediaPipe() {
     loading = true;
-    statusText.innerText = "Camera working! Loading MediaPipe...";
+    statusText.innerText = "Loading MediaPipe...";
 
     try {
-        const mediapipe = await import(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm"
+        const module = await import(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs"
         );
+
+        const mediapipe = module.default || module;
 
         const vision = await mediapipe.FilesetResolver.forVisionTasks(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
@@ -76,14 +79,16 @@ async function loadMediaPipe() {
 
     } catch (error) {
         console.error("MediaPipe error:", error);
+
         if (running) {
             statusText.innerText =
-                "Camera working, but MediaPipe failed: " + error.message;
+                "MediaPipe failed: " + error.message;
         }
     }
 
     loading = false;
 }
+
 
 
 let lastVideoTime = -1;
