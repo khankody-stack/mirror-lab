@@ -2,14 +2,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Webcam Mirror</title>
+    <title>MediaPipe Face Tracking</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Webcam Mirror</h1>
+    <h1>MediaPipe Face Tracking</h1>
 
-    <video id="webcam" autoplay playsinline muted></video>
+    <div class="camera-box">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+    </div>
 
     <br>
 
@@ -18,7 +21,7 @@
 
     <p id="status">Camera is off</p>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 
 </body>
 </html>
