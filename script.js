@@ -1,20 +1,57 @@
 
+import {
+    FaceLandmarker,
+    FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs";
+
 const video = document.getElementById("webcam");
-const canvas = document.getElementById("canvas");
+const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const statusText = document.getElementById("status");
 
-let stream = null;
 let faceLandmarker = null;
+let stream = null;
 let running = false;
-let loading = false;
+let lastVideoTime = -1;
 
-// Start the webcam
-async function startCamera() {
-    if (running) return;
-
+// Load MediaPipe
+async function loadMediaPipe() {
     try {
-        statusText.innerText = "Starting camera...";
+        statusText.innerText = "Loading MediaPipe...";
+
+        const vision = await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+        );
+
+        faceLandmarker = await FaceLandmarker.createFromOptions(
+            vision,
+            {
+                baseOptions: {
+                    modelAssetPath:
+                        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                    delegate: "CPU"
+                },
+                runningMode: "VIDEO",
+                numFaces: 1
+            }
+        );
+
+        statusText.innerText = "MediaPipe ready";
+    } catch (error) {
+        statusText.innerText = "MediaPipe error: " + error.message;
+        console.error(error);
+    }
+}
+
+// Start camera
+window.startCamera = async function() {
+    try {
+        if (running) return;
+
+        if (!faceLandmarker) {
+            statusText.innerText = "MediaPipe not ready";
+            return;
+        }
 
         stream = await navigator.mediaDevices.getUserMedia({
             video: true,
@@ -27,129 +64,21 @@ async function startCamera() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
+        lastVideoTime = -1;
         running = true;
-        statusText.innerText = "Camera working!";
 
-        // Start the drawing loop
-        detectFace();
+        statusText.innerText = "Face tracking running";
 
-        // Load MediaPipe separately
-        if (!faceLandmarker && !loading) {
-            loadMediaPipe();
-        }
+        trackFace();
 
     } catch (error) {
-        console.error(error);
         statusText.innerText = "Camera error: " + error.message;
+        console.error(error);
     }
-}
+};
 
-// Load MediaPipe
-
-async function loadMediaPipe() {
-    loading = true;
-    statusText.innerText = "Loading MediaPipe...";
-
-    try {
-        const module = await import(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs"
-        );
-
-        const mediapipe = module.default || module;
-
-        const vision = await mediapipe.FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
-        );
-
-        faceLandmarker = await mediapipe.FaceLandmarker.createFromOptions(
-            vision,
-            {
-                baseOptions: {
-                    modelAssetPath:
-                        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
-                },
-                runningMode: "VIDEO",
-                numFaces: 1
-            }
-        );
-
-        if (running) {
-            statusText.innerText = "Face tracking is running!";
-        }
-
-    } catch (error) {
-        console.error("MediaPipe error:", error);
-
-        if (running) {
-            statusText.innerText =
-                "MediaPipe failed: " + error.message;
-        }
-    }
-
-    loading = false;
-}
-
-
-
-let lastVideoTime = -1;
-
-function detectFace() {
-    if (!running) return;
-
-    // Match canvas size to webcam
-    if (canvas.width !== video.videoWidth ||
-        canvas.height !== video.videoHeight) {
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (faceLandmarker && video.readyState >= 2) {
-
-        // Only process new video frames
-        if (video.currentTime !== lastVideoTime) {
-
-            lastVideoTime = video.currentTime;
-
-            const results = faceLandmarker.detectForVideo(
-                video,
-                performance.now()
-            );
-
-            console.log("Faces found:", results.faceLandmarks.length);
-
-            if (results.faceLandmarks.length > 0) {
-
-                const landmarks = results.faceLandmarks[0];
-
-                statusText.innerText =
-                    "Face detected! Landmarks: " + landmarks.length;
-
-                // Draw green landmark dots
-                for (let i = 0; i < landmarks.length; i++) {
-
-                    let x = landmarks[i].x * canvas.width;
-                    let y = landmarks[i].y * canvas.height;
-
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3, 0, 2 * Math.PI);
-                    ctx.fillStyle = "#00ff00";
-                    ctx.fill();
-                }
-
-            } else {
-                statusText.innerText = "No face detected";
-            }
-        }
-    }
-
-    requestAnimationFrame(detectFace);
-}
-
-// Stop the webcam
-function stopCamera() {
+// Stop camera
+window.stopCamera = function() {
     running = false;
 
     if (stream) {
@@ -158,7 +87,44 @@ function stopCamera() {
     }
 
     video.srcObject = null;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    statusText.innerText = "Camera is off";
+    statusText.innerText = "Camera stopped";
+};
+
+// Track face
+function trackFace() {
+    if (!running) return;
+
+    if (video.readyState >= 2 &&
+        video.currentTime !== lastVideoTime) {
+
+        lastVideoTime = video.currentTime;
+
+        const results = faceLandmarker.detectForVideo(
+            video,
+            performance.now()
+        );
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const face of results.faceLandmarks) {
+            for (const point of face) {
+
+                const x = point.x * canvas.width;
+                const y = point.y * canvas.height;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = "lime";
+                ctx.fill();
+            }
+        }
+    }
+
+    requestAnimationFrame(trackFace);
 }
+
+// Load MediaPipe when page opens
+loadMediaPipe();
