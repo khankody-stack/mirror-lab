@@ -1,18 +1,36 @@
 
-import {
-    FaceLandmarker,
-    FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs";
-
 const video = document.getElementById("webcam");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const statusText = document.getElementById("status");
 
+let FaceLandmarker;
+let FilesetResolver;
+
 let faceLandmarker = null;
 let stream = null;
 let running = false;
 let lastVideoTime = -1;
+
+// Import MediaPipe
+async function importMediaPipe() {
+    try {
+        statusText.innerText = "Importing MediaPipe...";
+
+        const mp = await import(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm"
+        );
+
+        FaceLandmarker = mp.FaceLandmarker;
+        FilesetResolver = mp.FilesetResolver;
+
+        await loadMediaPipe();
+
+    } catch (error) {
+        statusText.innerText = "MediaPipe failed: " + error.message;
+        console.error(error);
+    }
+}
 
 // Load MediaPipe
 async function loadMediaPipe() {
@@ -37,13 +55,14 @@ async function loadMediaPipe() {
         );
 
         statusText.innerText = "MediaPipe ready";
+
     } catch (error) {
         statusText.innerText = "MediaPipe error: " + error.message;
         console.error(error);
     }
 }
 
-// Start camera
+// Start webcam
 window.startCamera = async function() {
     try {
         if (running) return;
@@ -77,7 +96,7 @@ window.startCamera = async function() {
     }
 };
 
-// Stop camera
+// Stop webcam
 window.stopCamera = function() {
     running = false;
 
@@ -93,7 +112,7 @@ window.stopCamera = function() {
     statusText.innerText = "Camera stopped";
 };
 
-// Track face
+// Track face and draw landmarks
 function trackFace() {
     if (!running) return;
 
@@ -126,5 +145,5 @@ function trackFace() {
     requestAnimationFrame(trackFace);
 }
 
-// Load MediaPipe when page opens
-loadMediaPipe();
+// Start loading MediaPipe
+importMediaPipe();
