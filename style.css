@@ -1,60 +1,24 @@
 
 body {
-    background-color: #151515;
+    background-color: #181818;
     color: white;
     text-align: center;
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-}
-
-h1 {
-    color: limegreen;
-}
-
-#cameraBox {
-    position: relative;
-    width: 80%;
-    max-width: 800px;
-    margin: 20px auto;
-
-    /* Mirror camera and landmarks together */
-    transform: scaleX(-1);
+    font-family: Arial;
 }
 
 video {
-    display: block;
-    width: 100%;
+    width: 640px;
+    max-width: 95%;
     border: 3px solid limegreen;
     border-radius: 10px;
-    box-sizing: border-box;
-}
-
-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    transform: scaleX(-1);
 }
 
 button {
     padding: 12px 20px;
     margin: 10px;
-    background-color: purple;
+    background-color: green;
     color: white;
     border: none;
-    border-radius: 5px;
     cursor: pointer;
-}
-
-button:hover {
-    background-color: #a020f0;
-}
-
-#status {
-    color: limegreen;
-    font-size: 16px;
-    margin-top: 15px;
 }
