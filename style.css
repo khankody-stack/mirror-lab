@@ -21,9 +21,6 @@ h1 {
 video {
     width: 100%;
     display: block;
-    border: 3px solid #9146ff;
-    border-radius: 12px;
-    box-sizing: border-box;
     transform: scaleX(-1);
 }
 
@@ -35,6 +32,7 @@ canvas {
     height: 100%;
     transform: scaleX(-1);
     pointer-events: none;
+    z-index: 10;
 }
 
 button {
