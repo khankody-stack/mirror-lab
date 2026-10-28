@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#100b18">
     <title>The Haunted Mirror</title>
@@ -12,18 +13,43 @@
     <main>
     <header class="site-header">
         <span class="eyebrow">Enter if you dare</span>
-        <h1><span aria-hidden="true">☾</span> The Haunted Mirror</h1>
-        <p class="subtitle">A little fright. A face in the dark. How loud can you haunt?</p>
+        <h1>The Haunted Mirror</h1>
+        <p class="subtitle">Choose your monster. Make your scariest face. Rule the haunt.</p>
     </header>
     <p id="status">Loading MediaPipe...</p>
 
     <div class="camera">
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
+        <div id="roundOverlay" class="round-overlay" hidden aria-live="assertive"></div>
     </div>
 
-    <button id="startBtn" disabled>Awaken the Mirror</button>
+    <button id="startBtn" disabled>Start Game</button>
+    <button id="previewBtn" class="secondary" disabled>Preview Camera</button>
     <button id="stopBtn" class="secondary">Stop Camera</button>
+
+    <section class="game-panel" aria-labelledby="gameTitle">
+        <span class="eyebrow">The scare challenge</span>
+        <h2 id="gameTitle">How scary can you get?</h2>
+        <p>Start a round: 3, 2, 1, then haunt for 8 seconds. Open wide, show your teeth, widen your eyes, and move your head within a comfortable range.</p>
+        <label for="faceFilter">Choose your spooky face</label>
+        <select id="faceFilter">
+            <option value="none">No filter</option>
+            <option value="vampire">Vampire - fangs and crimson eyes</option>
+            <option value="possessed">Possessed - ghost eyes and dark veins</option>
+            <option value="pumpkin">Jack-o'-lantern - pumpkin mask</option>
+        </select>
+        <button id="gameStart" disabled>Start Scare Round</button>
+        <p id="gameStatus" role="status">Click Start Game, or preview the camera to choose a filter and calibrate. Microphone is optional.</p>
+        <div class="round-score"><output id="totalScore">0</output><span> / 1000 fright points</span></div>
+        <div class="score-grid">
+            <div><label for="gameMouth">Mouth opening</label><meter id="gameMouth" min="0" max="250" value="0"></meter><output id="scoreMouth">0 / 250</output></div>
+            <div><label for="gameTeeth">Teeth showing (estimate)</label><meter id="gameTeeth" min="0" max="250" value="0"></meter><output id="scoreTeeth">0 / 250</output></div>
+            <div><label for="gameMotion">Head movement</label><meter id="gameMotion" min="0" max="250" value="0"></meter><output id="scoreMotion">0 / 250</output></div>
+            <div><label for="gameEyes">Eyes wide open</label><meter id="gameEyes" min="0" max="250" value="0"></meter><output id="scoreEyes">0 / 250</output></div>
+        </div>
+        <p class="game-note">Hold your expressions for points throughout the round. Stay in view. Teeth estimates work best in even light. Filters and microphone volume do not change the score.</p>
+    </section>
 
     <section class="meters" aria-label="Live meters">
         <div class="meter-card mouth-card">

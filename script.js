@@ -1,4 +1,7 @@
 
+import { ScareRound, CATEGORIES, clamp, teethVisibility, facePose, movementScore } from './scare-game.mjs';
+import { drawFilter } from './spooky-filters.mjs';
+
 // Keep the browser module and WASM files on the same published release.
 const MEDIAPIPE_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21";
 
@@ -7,6 +10,7 @@ const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const status = document.getElementById("status");
 const startButton = document.getElementById("startBtn");
+const previewButton = document.getElementById('previewBtn');
 startButton.disabled = true;
 
 let stream = null;
@@ -30,6 +34,91 @@ let mouthOpen = 1;
 let mouthSamples = [];
 let mouthSmoothed = null;
 let mouthLastTime = null;
+const round = new ScareRound();
+const gameButton = document.getElementById('gameStart');
+const roundOverlay = document.getElementById('roundOverlay');
+const gameStatus = document.getElementById('gameStatus');
+const filterSelect = document.getElementById('faceFilter');
+const teethCanvas = document.createElement('canvas');
+teethCanvas.width = 48;
+teethCanvas.height = 32;
+let previousPose = null;
+let previousPoseTime = null;
+let motionLevel = 0;
+let teethLevel = 0;
+let lastTeethTime = -Infinity;
+
+function startGame() {
+    if (!running || ['countdown', 'playing'].includes(round.phase)) return;
+    round.start(performance.now());
+    previousPose = null;
+    motionLevel = 0;
+    renderGame(performance.now());
+}
+
+function renderGame(now) {
+    const busy = ['countdown', 'playing'].includes(round.phase);
+    gameButton.disabled = !running || busy;
+    startButton.disabled = !faceLandmarker || busy;
+    previewButton.disabled = !faceLandmarker || busy;
+    gameButton.textContent = round.phase === 'finished' ? 'Play Again' : 'Start Scare Round';
+    mouthClosedButton.disabled ||= busy;
+    mouthOpenButton.disabled ||= busy;
+    roundOverlay.hidden = round.phase !== 'countdown';
+    if (round.phase === 'countdown') {
+        roundOverlay.textContent = Math.max(1, Math.ceil((round.begins - now)/1000));
+        gameStatus.textContent = 'Get ready! Look at the mirror.';
+    } else if (round.phase === 'playing') {
+        const seconds = Math.max(0, Math.ceil((round.ends - now)/1000));
+        gameStatus.textContent = `${seconds}s left - ${round.metrics ? 'give us your scariest face!' : 'come back into view to score!'}`;
+    } else if (round.phase === 'finished') {
+        const title = round.total >= 750 ? 'Nightmare legend!' : round.total >= 450 ? 'Certified haunter!' : 'A little spooky - try again!';
+        gameStatus.textContent = `Round complete. ${title}`;
+    }
+    const scores = round.scores;
+    for (const key of CATEGORIES) {
+        const name = key[0].toUpperCase() + key.slice(1);
+        document.getElementById(`game${name}`).value = scores[key];
+        document.getElementById(`score${name}`).textContent = `${scores[key]} / 250`;
+    }
+    document.getElementById('totalScore').textContent = round.total;
+}
+
+function updateGameTracking(results, now) {
+    const face = results.faceLandmarks[0];
+    if (!face) {
+        previousPose = null;
+        previousPoseTime = null;
+        motionLevel = 0;
+        teethLevel = 0;
+        round.observe(null, now);
+        return;
+    }
+    const categories = results.faceBlendshapes?.[0]?.categories ?? [];
+    const score = name => categories.find(c => c.categoryName === name)?.score ?? 0;
+    const pose = facePose(face, canvas.width, canvas.height);
+    const dt = previousPoseTime === null ? 0 : (now - previousPoseTime)/1000;
+    const movement = movementScore(previousPose, pose, dt);
+    motionLevel += (movement-motionLevel) * (dt > 0 ? 1-Math.exp(-dt/0.12) : 1);
+    previousPose = pose;
+    previousPoseTime = now;
+    if (now-lastTeethTime >= 100) {
+        teethLevel = teethVisibility(video, face, teethCanvas);
+        lastTeethTime = now;
+    }
+    const eyeRatio = (top, bottom, left, right) => {
+        const distance = (a,b) => Math.hypot((face[a].x-face[b].x)*canvas.width, (face[a].y-face[b].y)*canvas.height);
+        return distance(top,bottom)/Math.max(1,distance(left,right));
+    };
+    const eyeOpening = (eyeRatio(159,145,33,133)+eyeRatio(386,374,362,263))/2;
+    round.observe({
+        mouth: clamp((score('jawOpen')-mouthClosed)/(mouthOpen-mouthClosed)),
+        teeth: teethLevel,
+        motion: motionLevel,
+        eyes: clamp((eyeOpening-0.12)/0.22)
+    }, now);
+    drawFilter(ctx, face, filterSelect.value, canvas.width, canvas.height);
+}
 
 function resetMouthTracking() {
     mouthSamples = [];
@@ -60,6 +149,7 @@ function updateMouthMeter(score, now) {
 }
 
 function calibrateMouth(endpoint) {
+    if (['countdown', 'playing'].includes(round.phase)) return;
     if (!running || mouthSamples.length < 3 || performance.now() - mouthSamples.at(-1).time > 250) return;
     const average = mouthSamples.reduce((sum, sample) => sum + sample.score, 0) / mouthSamples.length;
     const closed = endpoint === "closed" ? average : mouthClosed;
@@ -177,6 +267,7 @@ async function loadMediaPipe() {
 
         status.textContent = "MediaPipe ready";
         startButton.disabled = false;
+        previewButton.disabled = false;
     } catch (error) {
         status.textContent = `MediaPipe failed to load: ${error.message}. Check your connection and reload.`;
         console.error(error);
@@ -195,6 +286,7 @@ async function startCamera() {
     const request = ++cameraRequest;
     try {
         startButton.disabled = true;
+        previewButton.disabled = true;
         const captured = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: false
@@ -213,8 +305,10 @@ async function startCamera() {
         canvas.height = video.videoHeight;
 
         running = true;
+        gameButton.disabled = false;
         lastVideoTime = -1;
         status.textContent = "Face tracking running";
+        gameStatus.textContent = 'Choose your filter, calibrate if needed, then start a scare round.';
 
         detectFace();
     } catch (error) {
@@ -225,13 +319,18 @@ async function startCamera() {
         status.textContent = "Camera error";
         console.error(error);
     } finally {
-        if (request === cameraRequest) startButton.disabled = false;
+        if (request === cameraRequest) {
+            startButton.disabled = false;
+            previewButton.disabled = false;
+        }
     }
 }
 
 // Detect and draw face landmarks
 function detectFace() {
     if (!running) return;
+    const now = performance.now();
+    round.tick(now);
 
     if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
@@ -246,24 +345,18 @@ function detectFace() {
             : undefined;
         updateMouthMeter(jawOpen, performance.now());
 
-        for (const face of results.faceLandmarks) {
-            for (const point of face) {
-                const x = point.x * canvas.width;
-                const y = point.y * canvas.height;
-
-                ctx.beginPath();
-                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = "lime";
-                ctx.fill();
-            }
-        }
+        updateGameTracking(results, performance.now());
     }
 
+    renderGame(performance.now());
     animationFrame = requestAnimationFrame(detectFace);
 }
 
 // Stop webcam
 function stopCamera() {
+    if (round.phase !== 'finished') round.reset();
+    previousPose = null;
+    previousPoseTime = null;
     cameraRequest++;
     startButton.disabled = !faceLandmarker;
     running = false;
@@ -281,10 +374,14 @@ function stopCamera() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     status.textContent = "Camera stopped";
+    renderGame(performance.now());
+    gameStatus.textContent = 'Camera stopped. Start the game when you are ready.';
 }
 
 document.getElementById("startBtn")
-    .addEventListener("click", startCamera);
+    .addEventListener("click", async () => { await startCamera(); startGame(); });
+gameButton.addEventListener('click', startGame);
+previewButton.addEventListener('click', startCamera);
 
 document.getElementById("stopBtn")
     .addEventListener("click", stopCamera);
@@ -294,3 +391,10 @@ micButton.addEventListener("click", toggleMicrophone);
 mouthClosedButton.addEventListener("click", () => calibrateMouth("closed"));
 mouthOpenButton.addEventListener("click", () => calibrateMouth("open"));
 window.addEventListener("pagehide", stopCamera);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && ['countdown', 'playing'].includes(round.phase)) {
+        round.reset();
+        gameStatus.textContent = 'Round cancelled while the tab was hidden. Start a new round to play.';
+        renderGame(performance.now());
+    }
+});

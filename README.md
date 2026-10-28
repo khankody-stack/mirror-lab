@@ -20,3 +20,26 @@ for the scream meter, which measures relative loudness (not calibrated decibels
 or scream recognition). Adjust Sensitivity for your microphone. Audio is
 processed locally without recording or speaker playback. Stop Camera releases
 both the camera and microphone; microphone access can also be disabled separately.
+
+## Scare game
+
+Start Game opens the camera, counts down 3 seconds, and runs an 8-second round.
+Preview Camera lets you choose a filter and calibrate before playing. Play Again
+starts a fresh round. Each category contributes up to 250 points (1000 total):
+
+- Mouth: calibrated jaw opening.
+- Teeth: approximate bright, neutral pixels within the inner-lip outline in raw video.
+- Head movement: face-size-normalized movement, roll, and turning speed, with small jitter ignored.
+- Eyes: eyelid opening relative to eye width.
+
+Scores accumulate over time, not frame count. Missing or stale tracking earns no
+points. Hiding the tab cancels an active round; Stop Camera cancels an unfinished
+round and releases devices. Teeth estimates depend on lighting and are not a
+trained teeth classifier. Move comfortably; vigorous movement is not necessary.
+Microphone loudness remains a separate optional meter.
+
+Vampire, Possessed, and Jack-o'-lantern canvas filters follow the face; they do
+not modify the raw video used for scoring. No camera frames are uploaded.
+The HTML declares UTF-8 to prevent garbled Halloween symbols.
+
+Run checks with Node 22+: `node --test tests/*.test.mjs`.

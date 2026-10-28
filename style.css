@@ -17,10 +17,9 @@ h1 span { color: var(--purple); }
     overflow: hidden; border-radius: 100px 100px 16px 16px; border: 3px solid #966143;
     background: radial-gradient(ellipse, #332344, #0b0811);
     box-shadow: 0 0 0 5px #24172e, 0 0 0 6px #5a3b52, 0 18px 65px #0008;
-    transform: scaleX(-1);
 }
-video { display: block; width: 100%; }
-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+video { display: block; width: 100%; transform: scaleX(-1); }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transform: scaleX(-1); }
 button {
     padding: 11px 18px; margin: 6px; background: linear-gradient(135deg, #ffad51, #f58030); color: #241008;
     border: 1px solid #ffc183; border-radius: 8px; font: 700 14px/1.4 system-ui, sans-serif; cursor: pointer;
@@ -49,6 +48,21 @@ input[type="range"] { accent-color: var(--purple); max-width: 60%; }
 .meter-note { max-width: 480px; margin: 24px auto; }
 footer { color: #ac97b9; font-size: 12px; letter-spacing: .08em; padding: 16px 0; }
 footer span { color: var(--orange); padding: 0 8px; }
+.round-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: #100b1870; color: #ffcc8a; font: bold clamp(3rem, 15vw, 7rem) Georgia, serif; text-shadow: 0 4px 24px #000; pointer-events: none; }
+.round-overlay[hidden] { display: none; }
+.game-panel { --fill: linear-gradient(90deg, #d46a24, #ffcc79); max-width: 640px; margin: 28px auto; padding: 24px; background: #21162c; border: 1px solid #785038; border-radius: 14px; text-align: left; }
+h2 { font-family: Georgia, serif; margin: 8px 0; color: #ffbc76; }
+.game-panel p { color: var(--muted); font-size: 14px; }
+.game-panel select { display: block; width: 100%; padding: 12px; margin: 8px 0 16px; background: #130d1d; color: #f8edf9; border: 1px solid #9870ad; border-radius: 8px; font: inherit; }
+select:focus-visible { outline: 3px solid #e5c9ff; outline-offset: 3px; }
+.game-panel button { margin-left: 0; }
+.round-score { padding: 16px 0; color: #d9c7e5; }
+.round-score output { font-size: 40px; font-weight: 800; color: #ffbc76; font-variant-numeric: tabular-nums; }
+.score-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.score-grid label, .score-grid output { font-size: 13px; display: block; }
+.score-grid meter { margin-top: 6px; height: 18px; }
+.score-grid output { color: var(--muted); margin-top: 4px; }
+.game-note { line-height: 1.6; }
 @media (max-width: 440px) {
     main { padding: 28px 14px 16px; }
     .meter-card { padding: 18px; }
