@@ -28,11 +28,30 @@ test('start, countdown, scoring, replay, and stop work through the page controls
     assert.equal(vm.runInContext('round.phase',context),'countdown');
     assert.equal(element('roundOverlay').textContent,3);
     assert.equal(element('gameStart').disabled,true);
-    for(now=100;now<=11000;now+=100){element('webcam').currentTime=now/1000;vm.runInContext('detectFace()',context);}
+    now=100;element('webcam').currentTime=.1;vm.runInContext('detectFace()',context);
+    assert.ok(element('gameMouth').value>0);
+    assert.equal(element('scoreMouth').textContent,'0 / 250');
+    assert.equal(element('gameMouth').value,Math.round(Number.parseFloat(element('mouthValue').textContent)));
+    for(now=200;now<=11000;now+=100){element('webcam').currentTime=now/1000;vm.runInContext('detectFace()',context);}
     assert.equal(vm.runInContext('round.phase',context),'finished');
     assert.equal(element('gameStart').textContent,'Play Again');
     assert.equal(element('roundOverlay').hidden,true);
     assert.ok(Number(element('totalScore').textContent)>0);
+    vm.runInContext(`
+        eyeSamples=[0,100,200,350].map(age=>({left:.3,right:.31,time:performance.now()-350+age}));
+        calibrateEyes('relaxed');
+    `,context);
+    assert.equal(vm.runInContext('eyesRelaxed.left',context),.3);
+    vm.runInContext(`
+        eyeSamples=[0,100,200,350].map(age=>({left:.45,right:.46,time:performance.now()-350+age}));
+        calibrateEyes('wide');
+    `,context);
+    assert.equal(vm.runInContext('eyesWide.right',context),.46);
+    context.fakeResults={faceLandmarks:[],faceBlendshapes:[]};
+    now+=100;element('webcam').currentTime=now/1000;vm.runInContext('detectFace()',context);
+    assert.equal(element('gameMouth').value,0);
+    assert.equal(element('gameEyes').value,0);
+    assert.equal(element('eyesRelaxedBtn').disabled,true);
     element('gameStart').events.click();
     assert.equal(vm.runInContext('round.total',context),0);
     assert.equal(vm.runInContext('round.phase',context),'countdown');

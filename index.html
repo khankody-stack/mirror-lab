@@ -22,6 +22,12 @@
                     <button id="mouthOpenBtn" disabled>Set wide open (100%)</button>
                     <p id="mouthCalibration" role="status">Hold your mouth closed briefly and set 0%, then open wide and set 100%. Calibration lasts until you reload.</p>
                 </section>
+                <section aria-labelledby="eyesTitle">
+                    <h3 id="eyesTitle">Eye calibration</h3>
+                    <button id="eyesRelaxedBtn" disabled>Set relaxed eyes (0%)</button>
+                    <button id="eyesWideBtn" disabled>Set wide eyes (100%)</button>
+                    <p id="eyesCalibration" role="status">Look straight ahead. Hold both eyes relaxed for half a second and set 0%, then widen them, hold, and set 100%. Calibration lasts until reload.</p>
+                </section>
                 <section aria-labelledby="audioTitle">
                     <h3 id="audioTitle">Microphone</h3>
                     <button id="micBtn">Enable Microphone</button>
@@ -60,11 +66,12 @@
     <aside class="scare-sidebar" aria-labelledby="gameTitle">
         <div class="score-heading"><span class="eyebrow">The scare challenge</span><h2 id="gameTitle">Fright score</h2></div>
         <div class="round-score"><output id="totalScore">0</output><span> / 1000</span></div>
+        <p class="score-explanation">Bars show live intensity. Points accumulate during your round.</p>
         <div class="score-grid">
-            <div><div class="meter-heading"><label for="gameMouth">Mouth opening</label><output id="scoreMouth">0 / 250</output></div><meter id="gameMouth" min="0" max="250" value="0"></meter></div>
-            <div><div class="meter-heading"><label for="gameTeeth">Teeth showing <small>(est.)</small></label><output id="scoreTeeth">0 / 250</output></div><meter id="gameTeeth" min="0" max="250" value="0"></meter></div>
-            <div><div class="meter-heading"><label for="gameMotion">Head movement</label><output id="scoreMotion">0 / 250</output></div><meter id="gameMotion" min="0" max="250" value="0"></meter></div>
-            <div><div class="meter-heading"><label for="gameEyes">Eyes wide open</label><output id="scoreEyes">0 / 250</output></div><meter id="gameEyes" min="0" max="250" value="0"></meter></div>
+            <div><div class="meter-heading"><label for="gameMouth">Mouth opening</label><output id="scoreMouth">0 / 250</output></div><meter id="gameMouth" min="0" max="100" value="0"></meter><small id="levelMouth">0% intensity</small></div>
+            <div><div class="meter-heading"><label for="gameTeeth">Teeth showing <small>(est.)</small></label><output id="scoreTeeth">0 / 250</output></div><meter id="gameTeeth" min="0" max="100" value="0"></meter><small id="levelTeeth">0% intensity</small></div>
+            <div><div class="meter-heading"><label for="gameMotion">Head movement</label><output id="scoreMotion">0 / 250</output></div><meter id="gameMotion" min="0" max="100" value="0"></meter><small id="levelMotion">0% intensity</small></div>
+            <div><div class="meter-heading"><label for="gameEyes">Eyes wide open</label><output id="scoreEyes">0 / 250</output></div><meter id="gameEyes" min="0" max="100" value="0"></meter><small id="levelEyes">0% intensity</small></div>
         </div>
         <button id="gameStart" disabled>Start Scare Round</button>
         <section class="live-meters" aria-label="Live meters">

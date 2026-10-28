@@ -59,7 +59,7 @@ test('teeth estimate responds to bright neutral mouth pixels rather than red lip
     const ctx=canvasContext();const data=new Uint8ClampedArray(48*32*4);
     ctx.getImageData=()=>({data});
     const sample={getContext:()=>ctx};const video={videoWidth:640,videoHeight:480};
-    for(let i=0;i<data.length;i+=4)data.set([220,210,195,255],i);
+    for(let i=0;i<data.length;i+=4)data.set(i<data.length/2 ? [220,210,195,255] : [35,20,20,255],i);
     assert.equal(teethVisibility(video,face,sample),1);
     for(let i=0;i<data.length;i+=4)data.set([200,65,60,255],i);
     assert.equal(teethVisibility(video,face,sample),0);

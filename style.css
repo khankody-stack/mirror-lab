@@ -37,6 +37,8 @@ canvas { pointer-events: none; }
 .round-score { padding: 10px 0 22px; color: var(--muted); }
 .round-score output { font-size: 48px; font-weight: 800; color: #ffbc76; font-variant-numeric: tabular-nums; }
 .score-grid { display: grid; gap: 18px; }
+.score-explanation { color: var(--muted); font-size: 11px; margin: -10px 0 18px; }
+.score-grid > div > small { display: block; margin-top: 3px; font-size: 10px; }
 .meter-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
 .meter-heading output { white-space: nowrap; color: #e6c5ff; font-variant-numeric: tabular-nums; }
 small { color: var(--muted); font-weight: normal; }

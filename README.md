@@ -2,7 +2,7 @@
 spooky face game
 
 Run locally with `python3 -m http.server 8000`, then open
-`http://localhost:8000`. Click Start Camera after MediaPipe is ready and allow
+`http://localhost:8000`. Click Preview Camera after MediaPipe is ready and allow
 camera access. Deployed sites must use HTTPS for webcam access.
 
 MediaPipe's browser module and WASM files are pinned together to `0.10.21`.
@@ -11,8 +11,9 @@ The module, WASM runtime, and face model require an internet connection.
 If loading fails, the page displays the error; check failed requests in the
 browser's Network panel and reload after resolving the connection issue.
 
-The mouth meter smooths MediaPipe's jaw-open expression score and shows tenths
-of a percent. For a personal range, hold your mouth closed briefly and click
+The mouth meter smooths the gap between three pairs of inner-lip landmarks,
+normalized to mouth width, and shows tenths of a percent. For a personal range,
+hold your mouth closed briefly and click
 Set closed mouth, then hold it wide open and click Set wide open. Calibration
 averages recent readings and lasts until reload; percentages describe your
 calibrated expression range, not a physical distance. Enable Microphone
@@ -27,10 +28,21 @@ Start Game opens the camera, counts down 3 seconds, and runs an 8-second round.
 Preview Camera lets you choose a filter and calibrate before playing. Play Again
 starts a fresh round. Each category contributes up to 250 points (1000 total):
 
-- Mouth: calibrated jaw opening.
-- Teeth: approximate bright, neutral pixels within the inner-lip outline in raw video.
-- Head movement: face-size-normalized movement, roll, and turning speed, with small jitter ignored.
-- Eyes: eyelid opening relative to eye width.
+- Mouth: calibrated lip opening, using the same smoothed signal as the live mouth meter.
+- Teeth: approximate connected bright bands contrasted against the mouth cavity,
+  sampled from the raw video in a mouth-aligned crop. Uniform bright regions,
+  red lips, low contrast, and isolated highlights are rejected.
+- Head movement: angular speed from MediaPipe's facial transformation matrix over
+  a short time window. A landmark-based fallback is available. Small jitter,
+  tracking jumps, and reacquisition do not earn movement points.
+- Eyes: three eyelid gaps per eye normalized to eye width, with blink suppression.
+  In Settings, set relaxed eyes to 0%, then wide eyes to 100%, for your own range.
+
+The four bars show live intensity even in preview; adjacent point totals show
+the points accumulated during a round. Expression smoothing uses elapsed time
+so the response is consistent across frame rates. Small or partially visible
+faces are excluded. Both mouth and eye calibration reject unstable captures
+and remain fixed during a round. Calibration lasts until reload.
 
 Scores accumulate over time, not frame count. Missing or stale tracking earns no
 points. Hiding the tab cancels an active round; Stop Camera cancels an unfinished
@@ -46,6 +58,6 @@ Run checks with Node 22+: `node --test tests/*.test.mjs`.
 
 The desktop layout prioritizes the camera, with filter cards along the bottom
 left and scare meters on the right. Settings in the top right contains mouth
-calibration, microphone controls, and instructions; press Escape to close it.
+and eye calibration, microphone controls, and instructions; press Escape to close it.
 On phones the meters stack below the camera and filter strip. Video and overlay
 use matching aspect-preserving sizing so filters stay aligned when resized.

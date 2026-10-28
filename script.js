@@ -1,5 +1,5 @@
 
-import { ScareRound, CATEGORIES, clamp, teethVisibility, facePose, movementScore } from './scare-game.mjs';
+import { ScareRound, CATEGORIES, teethVisibility, facePose, mouthOpenness, eyeOpenness, trackingIssue, normalizeExpression, HeadMotionTracker, SignalSmoother } from './scare-game.mjs';
 import { drawFilter } from './spooky-filters.mjs';
 
 // Keep the browser module and WASM files on the same published release.
@@ -29,8 +29,8 @@ let screamLevel = 0;
 const micButton = document.getElementById("micBtn");
 const mouthClosedButton = document.getElementById("mouthClosedBtn");
 const mouthOpenButton = document.getElementById("mouthOpenBtn");
-let mouthClosed = 0;
-let mouthOpen = 1;
+let mouthClosed = 0.02;
+let mouthOpen = 0.65;
 let mouthSamples = [];
 let mouthSmoothed = null;
 let mouthLastTime = null;
@@ -41,35 +41,53 @@ const gameStatus = document.getElementById('gameStatus');
 const teethCanvas = document.createElement('canvas');
 teethCanvas.width = 48;
 teethCanvas.height = 32;
-let previousPose = null;
-let previousPoseTime = null;
-let motionLevel = 0;
+const motionTracker = new HeadMotionTracker();
+const signalSmoother = new SignalSmoother();
+const eyesRelaxedButton = document.getElementById('eyesRelaxedBtn');
+const eyesWideButton = document.getElementById('eyesWideBtn');
+let eyesRelaxed = {left: 0.22, right: 0.22};
+let eyesWide = {left: 0.36, right: 0.36};
+let eyesWideCalibrated = false;
+let eyeSamples = [];
 let teethLevel = 0;
 let lastTeethTime = -Infinity;
 
 function startGame() {
     if (!running || ['countdown', 'playing'].includes(round.phase)) return;
     round.start(performance.now());
-    previousPose = null;
-    motionLevel = 0;
+    motionTracker.reset();
     renderGame(performance.now());
 }
 
 function renderGame(now) {
     const busy = ['countdown', 'playing'].includes(round.phase);
+    const live = running && round.metrics && now-round.sampleTime<=200 ? round.metrics : null;
+    if (running && !live && mouthLastTime!==null && now-mouthLastTime>200) {
+        resetMouthTracking();
+        eyeSamples=[];
+        eyesRelaxedButton.disabled=true;
+        eyesWideButton.disabled=true;
+        motionTracker.reset();
+        signalSmoother.reset();
+        teethLevel=0;
+        lastTeethTime=-Infinity;
+        document.getElementById('mouthStatus').textContent='Waiting for a clear camera frame';
+    }
     gameButton.disabled = !running || busy;
     startButton.disabled = !faceLandmarker || busy;
     previewButton.disabled = !faceLandmarker || busy;
     gameButton.textContent = round.phase === 'finished' ? 'Play Again' : 'Start Scare Round';
     mouthClosedButton.disabled ||= busy;
     mouthOpenButton.disabled ||= busy;
+    eyesRelaxedButton.disabled ||= busy;
+    eyesWideButton.disabled ||= busy;
     roundOverlay.hidden = round.phase !== 'countdown';
     if (round.phase === 'countdown') {
         roundOverlay.textContent = Math.max(1, Math.ceil((round.begins - now)/1000));
         gameStatus.textContent = 'Get ready! Look at the mirror.';
     } else if (round.phase === 'playing') {
         const seconds = Math.max(0, Math.ceil((round.ends - now)/1000));
-        gameStatus.textContent = `${seconds}s left - ${round.metrics ? 'give us your scariest face!' : 'come back into view to score!'}`;
+        gameStatus.textContent = `${seconds}s left - ${live ? 'give us your scariest face!' : 'come back into view to score!'}`;
     } else if (round.phase === 'finished') {
         const title = round.total >= 750 ? 'Nightmare legend!' : round.total >= 450 ? 'Certified haunter!' : 'A little spooky - try again!';
         gameStatus.textContent = `Round complete. ${title}`;
@@ -77,7 +95,9 @@ function renderGame(now) {
     const scores = round.scores;
     for (const key of CATEGORIES) {
         const name = key[0].toUpperCase() + key.slice(1);
-        document.getElementById(`game${name}`).value = scores[key];
+        const intensity = Math.round((live?.[key] ?? 0)*100);
+        document.getElementById(`game${name}`).value = intensity;
+        document.getElementById(`level${name}`).textContent = `${intensity}% intensity`;
         document.getElementById(`score${name}`).textContent = `${scores[key]} / 250`;
     }
     document.getElementById('totalScore').textContent = round.total;
@@ -85,39 +105,74 @@ function renderGame(now) {
 
 function updateGameTracking(results, now) {
     const face = results.faceLandmarks[0];
-    if (!face) {
-        previousPose = null;
-        previousPoseTime = null;
-        motionLevel = 0;
+    const issue = trackingIssue(face, canvas.width, canvas.height);
+    if (issue) {
+        motionTracker.reset();
+        signalSmoother.reset();
+        resetMouthTracking();
+        eyeSamples = [];
+        eyesRelaxedButton.disabled = true;
+        eyesWideButton.disabled = true;
         teethLevel = 0;
+        lastTeethTime = -Infinity;
+        document.getElementById('mouthStatus').textContent = issue;
         round.observe(null, now);
         return;
     }
     const categories = results.faceBlendshapes?.[0]?.categories ?? [];
     const score = name => categories.find(c => c.categoryName === name)?.score ?? 0;
-    const pose = facePose(face, canvas.width, canvas.height);
-    const dt = previousPoseTime === null ? 0 : (now - previousPoseTime)/1000;
-    const movement = movementScore(previousPose, pose, dt);
-    motionLevel += (movement-motionLevel) * (dt > 0 ? 1-Math.exp(-dt/0.12) : 1);
-    previousPose = pose;
-    previousPoseTime = now;
+    updateMouthMeter(mouthOpenness(face, canvas.width, canvas.height), now);
+    const pose = facePose(face, canvas.width, canvas.height, results.facialTransformationMatrixes?.[0]);
+    const movement = motionTracker.update(pose, now);
     if (now-lastTeethTime >= 100) {
         teethLevel = teethVisibility(video, face, teethCanvas);
         lastTeethTime = now;
     }
-    const eyeRatio = (top, bottom, left, right) => {
-        const distance = (a,b) => Math.hypot((face[a].x-face[b].x)*canvas.width, (face[a].y-face[b].y)*canvas.height);
-        return distance(top,bottom)/Math.max(1,distance(left,right));
-    };
-    const eyeOpening = (eyeRatio(159,145,33,133)+eyeRatio(386,374,362,263))/2;
-    round.observe({
-        mouth: clamp((score('jawOpen')-mouthClosed)/(mouthOpen-mouthClosed)),
+    const eyes = eyeOpenness(face, canvas.width, canvas.height);
+    const blinking = score('eyeBlinkLeft')>0.5 || score('eyeBlinkRight')>0.5;
+    if (blinking) eyeSamples = [];
+    else eyeSamples.push({...eyes,time:now});
+    eyeSamples = eyeSamples.filter(sample=>now-sample.time<=500);
+    const ready = eyeSamples.length>=4 && now-eyeSamples[0].time>=300;
+    eyesRelaxedButton.disabled = !ready;
+    eyesWideButton.disabled = !ready;
+    const eyeIntensity = side => score(side==='left' ? 'eyeBlinkLeft' : 'eyeBlinkRight')>0.5
+        ? 0 : normalizeExpression(eyes[side],eyesRelaxed[side],eyesWide[side]);
+    const filtered = signalSmoother.update({
+        mouth: normalizeExpression(mouthSmoothed,mouthClosed,mouthOpen),
         teeth: teethLevel,
-        motion: motionLevel,
-        eyes: clamp((eyeOpening-0.12)/0.22)
-    }, now);
+        motion: movement,
+        eyes: (eyeIntensity('left')+eyeIntensity('right'))/2
+    },now);
+    // Mouth is already smoothed; use exactly the same reading for live and game bars.
+    filtered.mouth = normalizeExpression(mouthSmoothed,mouthClosed,mouthOpen);
+    if (blinking) filtered.eyes = (eyeIntensity('left')+eyeIntensity('right'))/2;
+    round.observe(filtered,now);
     const selectedFilter = document.querySelector('input[name="faceFilter"]:checked')?.value ?? 'none';
     drawFilter(ctx, face, selectedFilter, canvas.width, canvas.height);
+}
+
+function calibrateEyes(endpoint) {
+    if (!running || ['countdown','playing'].includes(round.phase) || eyeSamples.length<4
+        || performance.now()-eyeSamples.at(-1).time>250 || eyeSamples.at(-1).time-eyeSamples[0].time<300) return;
+    const average = side => eyeSamples.reduce((sum,sample)=>sum+sample[side],0)/eyeSamples.length;
+    const candidate = {left:average('left'),right:average('right')};
+    // Reject unstable captures instead of calibrating during a blink or head turn.
+    const stable = ['left','right'].every(side=>Math.max(...eyeSamples.map(s=>s[side]))-Math.min(...eyeSamples.map(s=>s[side]))<0.06);
+    const relaxed = endpoint==='relaxed' ? candidate : eyesRelaxed;
+    const wide = endpoint==='wide' ? candidate : !eyesWideCalibrated
+        ? {left:candidate.left+0.14,right:candidate.right+0.14} : eyesWide;
+    if (!stable || ['left','right'].some(side=>wide[side]-relaxed[side]<0.035)) {
+        document.getElementById('eyesCalibration').textContent = 'Hold both eyes steady and relaxed for 0%, or noticeably wider for 100%, then try again.';
+        return;
+    }
+    eyesRelaxed=relaxed;
+    eyesWide=wide;
+    if (endpoint==='wide') eyesWideCalibrated = true;
+    signalSmoother.reset();
+    document.getElementById('eyesCalibration').textContent = endpoint==='relaxed'
+        ? 'Relaxed eyes saved. Now widen both eyes, hold briefly, and set 100%.'
+        : 'Wide eyes saved. Your eye meter now uses your personal range until reload.';
 }
 
 function resetMouthTracking() {
@@ -154,7 +209,8 @@ function calibrateMouth(endpoint) {
     const average = mouthSamples.reduce((sum, sample) => sum + sample.score, 0) / mouthSamples.length;
     const closed = endpoint === "closed" ? average : mouthClosed;
     const open = endpoint === "open" ? average : mouthOpen;
-    if (open - closed < 0.1) {
+    const stable = Math.max(...mouthSamples.map(s=>s.score))-Math.min(...mouthSamples.map(s=>s.score))<0.08;
+    if (open - closed < 0.1 || !stable) {
         document.getElementById("mouthCalibration").textContent = "Keep your mouth closed for 0%, or open wider for 100%, then try again.";
         return;
     }
@@ -261,6 +317,7 @@ async function loadMediaPipe() {
                 },
                 runningMode: "VIDEO",
                 outputFaceBlendshapes: true,
+                outputFacialTransformationMatrixes: true,
                 numFaces: 1
             }
         );
@@ -342,11 +399,6 @@ function detectFace() {
             performance.now()
         );
 
-        const jawOpen = results.faceLandmarks.length
-            ? results.faceBlendshapes?.[0]?.categories.find(category => category.categoryName === "jawOpen")?.score
-            : undefined;
-        updateMouthMeter(jawOpen, performance.now());
-
         updateGameTracking(results, performance.now());
     }
 
@@ -357,8 +409,13 @@ function detectFace() {
 // Stop webcam
 function stopCamera() {
     if (round.phase !== 'finished') round.reset();
-    previousPose = null;
-    previousPoseTime = null;
+    motionTracker.reset();
+    signalSmoother.reset();
+    eyeSamples = [];
+    eyesRelaxedButton.disabled = true;
+    eyesWideButton.disabled = true;
+    teethLevel = 0;
+    lastTeethTime = -Infinity;
     cameraRequest++;
     startButton.disabled = !faceLandmarker;
     running = false;
@@ -393,6 +450,8 @@ loadMediaPipe();
 micButton.addEventListener("click", toggleMicrophone);
 mouthClosedButton.addEventListener("click", () => calibrateMouth("closed"));
 mouthOpenButton.addEventListener("click", () => calibrateMouth("open"));
+eyesRelaxedButton.addEventListener('click',()=>calibrateEyes('relaxed'));
+eyesWideButton.addEventListener('click',()=>calibrateEyes('wide'));
 window.addEventListener("pagehide", stopCamera);
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && ['countdown', 'playing'].includes(round.phase)) {
