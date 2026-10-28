@@ -99,3 +99,13 @@ countdown and game duration, and can be used only once. Server validation checks
 name length, score ranges, category totals, and rate limits. Scores are computed
 in the browser, so these checks are not proof of genuine camera performance.
 No face images, audio, or landmarks are submitted to the leaderboard.
+
+## Optional theme music
+
+Play Theme Music loads a visible YouTube player for the Vic Mizzy Topic-channel
+recording of The Addams Family theme (`75lCvUrdKl8`). Nothing is downloaded or
+self-hosted. The player provides pause, mute, and volume controls and is set to
+loop. Stop Theme Music unloads it. No YouTube player is loaded before the visitor
+clicks Play. Playback depends on YouTube availability and browser settings; an
+external Listen on YouTube link is always available. Use headphones when measuring
+microphone loudness so the music does not register on the scream meter.

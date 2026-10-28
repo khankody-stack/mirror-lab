@@ -52,7 +52,18 @@ meter::-moz-meter-bar { background: var(--fill); }
 .live-meters p { color: var(--muted); font-size: 11px; margin: 7px 0 18px; }
 .live-meters p:last-child { margin-bottom: 0; }
 #screamMeter { --fill: linear-gradient(90deg, #7844c4, #d2a4ff); }
-.filter-strip { grid-area: filters; min-width: 0; border: 0; padding: 0; margin: 0; }
+.bottom-controls { grid-area: filters; display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
+.filter-strip { flex: 1; min-width: 0; border: 0; padding: 0; margin: 0; }
+.music-panel { flex: 0 0 240px; padding: 14px; border: 1px solid #513a60; border-radius: 12px; background: #20162b; }
+.music-panel:has(iframe) { flex-basis: 340px; }
+.music-panel h3 { font-size: 13px; margin: 4px 0 10px; }
+.music-panel button { padding: 8px 12px; font-size: 12px; }
+.music-panel p, .music-panel a { font-size: 11px; color: var(--muted); }
+.music-panel p { margin: 10px 0 5px; }
+.music-panel a { color: #d4aff5; }
+#themePlayerHost { margin-top: 12px; }
+#themePlayerHost[hidden] { display: none; }
+#themePlayerHost iframe { display: block; width: 100%; min-width: 200px; height: 200px; border: 0; border-radius: 6px; }
 .filter-strip legend { font-size: 11px; color: var(--muted); padding: 0 0 10px; text-transform: uppercase; letter-spacing: .12em; }
 .filter-options { display: flex; gap: 10px; overflow-x: auto; padding: 4px 4px 7px; }
 .filter-option { position: relative; display: flex; flex: 0 0 126px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 88px; padding: 10px; border: 1px solid #513a60; border-radius: 12px; background: #20162b; color: #d0c0db; cursor: pointer; font-size: 12px; }
@@ -99,6 +110,8 @@ input[type='range'] { width: 100%; accent-color: var(--purple); margin: 10px 0 0
     .topbar { flex-wrap: wrap; gap: 10px; }
     .brand { flex: 1; } .topbar #status { order: 3; max-width: 100%; flex-basis: 100%; }
     .camera { flex: none; height: 54dvh; min-height: 300px; }
+    .bottom-controls { flex-direction: column; align-items: stretch; }
+    .music-panel, .music-panel:has(iframe) { flex-basis: auto; }
     .scare-sidebar { padding: 20px; } .score-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
     .camera-actions button { padding: 10px 12px; } .settings-content { max-height: calc(100dvh - 90px); }
 }

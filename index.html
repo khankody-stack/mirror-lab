@@ -87,6 +87,7 @@
         </section>
     </aside>
 
+    <section class="bottom-controls" aria-label="Face filters and theme music">
     <fieldset class="filter-strip">
         <legend>Choose your spooky face</legend>
         <div class="filter-options">
@@ -96,6 +97,15 @@
             <label class="filter-option"><input type="radio" name="faceFilter" value="pumpkin"><svg class="filter-icon" aria-hidden="true" viewBox="0 0 32 32"><path d="M16 8q0-5 5-5M16 9C1 3-2 31 16 27c18 4 15-24 0-18zM8 16l4-4 2 5zm10 1 2-5 4 4zM8 21l5 3 3-3 3 3 5-3"/></svg><span>Jack-o'-lantern</span></label>
         </div>
     </fieldset>
+    <section class="music-panel" aria-labelledby="musicTitle">
+        <span class="eyebrow">Set the mood</span>
+        <h3 id="musicTitle">The Addams Family theme</h3>
+        <button id="themeMusicBtn" class="secondary" aria-expanded="false" aria-controls="themePlayerHost">Play Theme Music</button>
+        <div id="themePlayerHost" hidden></div>
+        <p id="themeMusicStatus" role="status">Optional music from YouTube. Use headphones with the scream meter.</p>
+        <a href="https://www.youtube.com/watch?v=75lCvUrdKl8" target="_blank" rel="noopener noreferrer">Listen on YouTube</a>
+    </section>
+    </section>
 </main>
 <dialog id="leaderboardDialog" aria-labelledby="leaderboardTitle">
     <div class="leaderboard-header"><div><span class="eyebrow">Shared top 10</span><h2 id="leaderboardTitle">Hall of Frights</h2></div><button id="closeLeaderboardBtn" class="quiet" aria-label="Close top scores">Close</button></div>
@@ -111,5 +121,6 @@
     <table class="leaderboard-table"><caption class="visually-hidden">Top ten scare scores across all visitors</caption><thead><tr><th scope="col">Rank</th><th scope="col">Name</th><th scope="col">Score</th></tr></thead><tbody id="leaderboardRows"></tbody></table>
 </dialog>
 <script type="module" src="script.js"></script>
+<script type="module" src="theme-music.mjs"></script>
 </body>
 </html>
