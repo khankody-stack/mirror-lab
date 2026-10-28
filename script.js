@@ -38,7 +38,6 @@ const round = new ScareRound();
 const gameButton = document.getElementById('gameStart');
 const roundOverlay = document.getElementById('roundOverlay');
 const gameStatus = document.getElementById('gameStatus');
-const filterSelect = document.getElementById('faceFilter');
 const teethCanvas = document.createElement('canvas');
 teethCanvas.width = 48;
 teethCanvas.height = 32;
@@ -117,7 +116,8 @@ function updateGameTracking(results, now) {
         motion: motionLevel,
         eyes: clamp((eyeOpening-0.12)/0.22)
     }, now);
-    drawFilter(ctx, face, filterSelect.value, canvas.width, canvas.height);
+    const selectedFilter = document.querySelector('input[name="faceFilter"]:checked')?.value ?? 'none';
+    drawFilter(ctx, face, selectedFilter, canvas.width, canvas.height);
 }
 
 function resetMouthTracking() {
@@ -300,6 +300,7 @@ async function startCamera() {
         video.srcObject = stream;
         await video.play();
         if (request !== cameraRequest) return;
+        video.dataset.active = 'true';
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -316,6 +317,7 @@ async function startCamera() {
         stream?.getTracks().forEach(track => track.stop());
         stream = null;
         video.srcObject = null;
+        delete video.dataset.active;
         status.textContent = "Camera error";
         console.error(error);
     } finally {
@@ -371,6 +373,7 @@ function stopCamera() {
     }
 
     video.srcObject = null;
+    delete video.dataset.active;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     status.textContent = "Camera stopped";
@@ -396,5 +399,12 @@ document.addEventListener('visibilitychange', () => {
         round.reset();
         gameStatus.textContent = 'Round cancelled while the tab was hidden. Start a new round to play.';
         renderGame(performance.now());
+    }
+});
+document.addEventListener('keydown', event => {
+    const settings = document.getElementById('settingsPanel');
+    if (event.key === 'Escape' && settings.open) {
+        settings.open = false;
+        settings.querySelector('summary').focus();
     }
 });

@@ -10,12 +10,12 @@ test('start, countdown, scoring, replay, and stop work through the page controls
     const graphics=new Proxy({getImageData:()=>({data:new Uint8ClampedArray(48*32*4)})},{get:(t,k)=>t[k]??(()=>{})});
     function element(id) {
         if(!elements.has(id)) elements.set(id,{value:id==='faceFilter'?'none':0,textContent:'',disabled:false,hidden:true,
-            events:{},addEventListener(name,fn){this.events[name]=fn;},getContext:()=>graphics,
+            events:{},dataset:{},addEventListener(name,fn){this.events[name]=fn;},getContext:()=>graphics,
             videoWidth:640,videoHeight:480,readyState:2,currentTime:0,async play(){}});
         return elements.get(id);
     }
     const context=vm.createContext({...scoring,drawFilter,console,Float32Array,
-        document:{getElementById:element,createElement:()=>({getContext:()=>graphics}),addEventListener(){}},
+        document:{getElementById:element,querySelector:()=>({value:'none'}),createElement:()=>({getContext:()=>graphics}),addEventListener(){}},
         window:{addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){stopped++;}}]})}},
         requestAnimationFrame:()=>1,cancelAnimationFrame(){},performance:{now:()=>now}});
     const source=readFileSync(new URL('../script.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('loadMediaPipe();','');

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,71 +8,86 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <main>
-    <header class="site-header">
-        <span class="eyebrow">Enter if you dare</span>
-        <h1>The Haunted Mirror</h1>
-        <p class="subtitle">Choose your monster. Make your scariest face. Rule the haunt.</p>
+<main class="mirror-app">
+    <header class="topbar">
+        <div class="brand"><span class="eyebrow">Mirror Lab</span><h1>The Haunted Mirror</h1></div>
+        <p id="status" role="status">Loading MediaPipe...</p>
+        <details class="settings" id="settingsPanel">
+            <summary>Settings <span aria-hidden="true">&#9881;</span></summary>
+            <div class="settings-content">
+                <h2>Mirror settings</h2>
+                <section aria-labelledby="calibrationTitle">
+                    <h3 id="calibrationTitle">Mouth calibration</h3>
+                    <button id="mouthClosedBtn" disabled>Set closed mouth (0%)</button>
+                    <button id="mouthOpenBtn" disabled>Set wide open (100%)</button>
+                    <p id="mouthCalibration" role="status">Hold your mouth closed briefly and set 0%, then open wide and set 100%. Calibration lasts until you reload.</p>
+                </section>
+                <section aria-labelledby="audioTitle">
+                    <h3 id="audioTitle">Microphone</h3>
+                    <button id="micBtn">Enable Microphone</button>
+                    <p id="micStatus" role="status">Enable your microphone to measure loudness.</p>
+                    <label for="sensitivity">Sensitivity</label>
+                    <input id="sensitivity" type="range" min="1" max="5" step="0.1" value="2">
+                    <p>Sound is measured locally, without recording. Microphone volume does not affect your game score.</p>
+                </section>
+                <section aria-labelledby="howTitle">
+                    <h3 id="howTitle">How to haunt</h3>
+                    <p>After a 3-second countdown, you have 8 seconds to open wide, show your teeth, widen your eyes, and move your head comfortably. Each category earns up to 250 points.</p>
+                    <p>Stay in view and use even lighting for the teeth estimate. Preview Camera lets you calibrate before playing.</p>
+                </section>
+                <p class="settings-hint">Click Settings again or press Escape to close.</p>
+            </div>
+        </details>
     </header>
-    <p id="status">Loading MediaPipe...</p>
 
-    <div class="camera">
-        <video id="webcam" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
-        <div id="roundOverlay" class="round-overlay" hidden aria-live="assertive"></div>
-    </div>
-
-    <button id="startBtn" disabled>Start Game</button>
-    <button id="previewBtn" class="secondary" disabled>Preview Camera</button>
-    <button id="stopBtn" class="secondary">Stop Camera</button>
-
-    <section class="game-panel" aria-labelledby="gameTitle">
-        <span class="eyebrow">The scare challenge</span>
-        <h2 id="gameTitle">How scary can you get?</h2>
-        <p>Start a round: 3, 2, 1, then haunt for 8 seconds. Open wide, show your teeth, widen your eyes, and move your head within a comfortable range.</p>
-        <label for="faceFilter">Choose your spooky face</label>
-        <select id="faceFilter">
-            <option value="none">No filter</option>
-            <option value="vampire">Vampire - fangs and crimson eyes</option>
-            <option value="possessed">Possessed - ghost eyes and dark veins</option>
-            <option value="pumpkin">Jack-o'-lantern - pumpkin mask</option>
-        </select>
-        <button id="gameStart" disabled>Start Scare Round</button>
-        <p id="gameStatus" role="status">Click Start Game, or preview the camera to choose a filter and calibrate. Microphone is optional.</p>
-        <div class="round-score"><output id="totalScore">0</output><span> / 1000 fright points</span></div>
-        <div class="score-grid">
-            <div><label for="gameMouth">Mouth opening</label><meter id="gameMouth" min="0" max="250" value="0"></meter><output id="scoreMouth">0 / 250</output></div>
-            <div><label for="gameTeeth">Teeth showing (estimate)</label><meter id="gameTeeth" min="0" max="250" value="0"></meter><output id="scoreTeeth">0 / 250</output></div>
-            <div><label for="gameMotion">Head movement</label><meter id="gameMotion" min="0" max="250" value="0"></meter><output id="scoreMotion">0 / 250</output></div>
-            <div><label for="gameEyes">Eyes wide open</label><meter id="gameEyes" min="0" max="250" value="0"></meter><output id="scoreEyes">0 / 250</output></div>
+    <section class="video-area" aria-label="Haunted mirror camera">
+        <div class="camera">
+            <div class="camera-placeholder" aria-hidden="true"><span class="eyebrow">Your monster awaits</span><p>Step into the mirror</p><span>Preview your face or start a scare round below.</span></div>
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+            <div id="roundOverlay" class="round-overlay" hidden aria-live="assertive"></div>
         </div>
-        <p class="game-note">Hold your expressions for points throughout the round. Stay in view. Teeth estimates work best in even light. Filters and microphone volume do not change the score.</p>
+        <div class="camera-toolbar">
+            <div class="camera-actions">
+                <button id="startBtn" disabled>Start Game</button>
+                <button id="previewBtn" class="secondary" disabled>Preview Camera</button>
+                <button id="stopBtn" class="quiet">Stop Camera</button>
+            </div>
+            <p id="gameStatus" role="status">Choose a filter, then start your haunt.</p>
+        </div>
     </section>
 
-    <section class="meters" aria-label="Live meters">
-        <div class="meter-card mouth-card">
-            <span class="eyebrow">The monster within</span>
-            <label for="mouthMeter"><span>🎃 Mouth opening</span> <output id="mouthValue">0.0%</output></label>
+    <aside class="scare-sidebar" aria-labelledby="gameTitle">
+        <div class="score-heading"><span class="eyebrow">The scare challenge</span><h2 id="gameTitle">Fright score</h2></div>
+        <div class="round-score"><output id="totalScore">0</output><span> / 1000</span></div>
+        <div class="score-grid">
+            <div><div class="meter-heading"><label for="gameMouth">Mouth opening</label><output id="scoreMouth">0 / 250</output></div><meter id="gameMouth" min="0" max="250" value="0"></meter></div>
+            <div><div class="meter-heading"><label for="gameTeeth">Teeth showing <small>(est.)</small></label><output id="scoreTeeth">0 / 250</output></div><meter id="gameTeeth" min="0" max="250" value="0"></meter></div>
+            <div><div class="meter-heading"><label for="gameMotion">Head movement</label><output id="scoreMotion">0 / 250</output></div><meter id="gameMotion" min="0" max="250" value="0"></meter></div>
+            <div><div class="meter-heading"><label for="gameEyes">Eyes wide open</label><output id="scoreEyes">0 / 250</output></div><meter id="gameEyes" min="0" max="250" value="0"></meter></div>
+        </div>
+        <button id="gameStart" disabled>Start Scare Round</button>
+        <section class="live-meters" aria-label="Live meters">
+            <span class="eyebrow">Live readings</span>
+            <div class="meter-heading"><label for="mouthMeter">Mouth opening</label><output id="mouthValue">0.0%</output></div>
             <meter id="mouthMeter" min="0" max="100" value="0">0%</meter>
             <p id="mouthStatus">Start the camera to track your mouth.</p>
-            <button id="mouthClosedBtn" disabled>Set closed mouth (0%)</button>
-            <button id="mouthOpenBtn" disabled>Set wide open (100%)</button>
-            <p id="mouthCalibration" role="status">For better accuracy, hold your mouth closed briefly and set 0%, then open wide and set 100%. Calibration lasts until you reload.</p>
-        </div>
-        <div class="meter-card scream-card">
-            <span class="eyebrow">Wake the spirits</span>
-            <label for="screamMeter"><span>👻 Scream meter</span> <output id="screamValue">0%</output></label>
+            <div class="meter-heading"><label for="screamMeter">Scream volume</label><output id="screamValue">0%</output></div>
             <meter id="screamMeter" min="0" max="100" low="35" high="75" optimum="0" value="0">0%</meter>
-            <p id="micStatus" role="status">Enable your microphone to measure loudness.</p>
-            <button id="micBtn">Enable Microphone</button>
-            <label for="sensitivity">Sensitivity <input id="sensitivity" type="range" min="1" max="5" step="0.1" value="2"></label>
-        </div>
-        <p class="meter-note">The scream meter measures sound volume, including background noise. Audio stays in your browser and is not recorded.</p>
-    </section>
-    <footer>Happy haunting <span aria-hidden="true">✦</span> Mirror Lab</footer>
-    </main>
+            <p class="meter-note">Enable your mic in Settings. Background sounds also register.</p>
+        </section>
+    </aside>
 
-    <script type="module" src="script.js"></script>
+    <fieldset class="filter-strip">
+        <legend>Choose your spooky face</legend>
+        <div class="filter-options">
+            <label class="filter-option"><input type="radio" name="faceFilter" value="none" checked><svg class="filter-icon" aria-hidden="true" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M11 20q5 5 10 0M11 12h1m8 0h1"/></svg><span>Original</span></label>
+            <label class="filter-option"><input type="radio" name="faceFilter" value="vampire"><svg class="filter-icon" aria-hidden="true" viewBox="0 0 32 32"><path d="M4 10q12 7 24 0M6 12l3 13 5-10m4 0 5 10 3-13M9 5l3 2m8 0 3-2"/></svg><span>Vampire</span></label>
+            <label class="filter-option"><input type="radio" name="faceFilter" value="possessed"><svg class="filter-icon" aria-hidden="true" viewBox="0 0 32 32"><path d="M6 27V14a10 10 0 0120 0v13l-5-4-5 4-5-4z"/><ellipse cx="12" cy="14" rx="1" ry="2"/><ellipse cx="20" cy="14" rx="1" ry="2"/><path d="M14 20h4"/></svg><span>Possessed</span></label>
+            <label class="filter-option"><input type="radio" name="faceFilter" value="pumpkin"><svg class="filter-icon" aria-hidden="true" viewBox="0 0 32 32"><path d="M16 8q0-5 5-5M16 9C1 3-2 31 16 27c18 4 15-24 0-18zM8 16l4-4 2 5zm10 1 2-5 4 4zM8 21l5 3 3-3 3 3 5-3"/></svg><span>Jack-o'-lantern</span></label>
+        </div>
+    </fieldset>
+</main>
+<script type="module" src="script.js"></script>
 </body>
 </html>

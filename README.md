@@ -43,3 +43,9 @@ not modify the raw video used for scoring. No camera frames are uploaded.
 The HTML declares UTF-8 to prevent garbled Halloween symbols.
 
 Run checks with Node 22+: `node --test tests/*.test.mjs`.
+
+The desktop layout prioritizes the camera, with filter cards along the bottom
+left and scare meters on the right. Settings in the top right contains mouth
+calibration, microphone controls, and instructions; press Escape to close it.
+On phones the meters stack below the camera and filter strip. Video and overlay
+use matching aspect-preserving sizing so filters stay aligned when resized.
