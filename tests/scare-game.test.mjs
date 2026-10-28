@@ -43,10 +43,17 @@ test('movement ignores static poses, tracking gaps and angle wraparound',()=>{
     assert.ok(movementScore(pose,{...pose,roll:.12},.03)>0.5);
     assert.equal(movementScore({...pose,roll:Math.PI-.001},{...pose,roll:-Math.PI+.001},.03),0);
 });
-function canvasContext() {
-    return new Proxy({}, {get(target,key){return target[key]??((...args)=>{
-        for(const arg of args) if(typeof arg==='number') assert.ok(Number.isFinite(arg),`${key} has a finite coordinate`);
-    });}});
+function canvasContext(colors=[],operations=[]) {
+    return new Proxy({}, {get(target,key){
+        if(key==='createLinearGradient' || key==='createRadialGradient') return (...args)=>{
+            for(const arg of args) assert.ok(Number.isFinite(arg));
+            return {addColorStop(position,color){assert.ok(position>=0 && position<=1);assert.equal(typeof color,'string');colors.push(color);}};
+        };
+        return target[key]??((...args)=>{
+            operations.push(key);
+            for(const arg of args) if(typeof arg==='number') assert.ok(Number.isFinite(arg),`${key} has a finite coordinate`);
+        });
+    }});
 }
 const face=Array.from({length:478},(_,i)=>({x:.5+Math.sin(i)*.1,y:.5+Math.cos(i)*.1}));
 face[33]={x:.3,y:.35};face[263]={x:.7,y:.35};
@@ -54,6 +61,22 @@ test('all filters draw finite geometry with a tilted, tracked face',()=>{
     for(const kind of ['none','vampire','possessed','pumpkin']) drawFilter(canvasContext(),face,kind,640,480);
     const tilted=face.map(p=>({...p,y:p.y+p.x*.2}));
     for(const kind of ['vampire','possessed','pumpkin']) drawFilter(canvasContext(),tilted,kind,640,480);
+});
+test('vampire eye and fang details follow blinks and mouth closure',()=>{
+    const open=face.map(p=>({...p}));
+    open[14]={x:open[13].x,y:open[13].y+.15};
+    let colors=[],operations=[];
+    drawFilter(canvasContext(colors,operations),open,'vampire',640,480);
+    assert.ok(colors.includes('#a92d35'),'red irises are rendered when eyes are open');
+    assert.ok(colors.includes('#fff6e2'),'shaded fangs are rendered in an open mouth');
+    assert.ok(operations.filter(name=>name==='clip').length>=4,'skin, eye, and mouth effects are clipped');
+    assert.equal(operations.filter(name=>name==='save').length,operations.filter(name=>name==='restore').length);
+    const closed=open.map(p=>({...p}));
+    closed[14]={...closed[13]};closed[145]={...closed[159]};closed[374]={...closed[386]};
+    colors=[];
+    drawFilter(canvasContext(colors),closed,'vampire',640,480);
+    assert.ok(!colors.includes('#a92d35'),'closed eyelids hide iris effects');
+    assert.ok(!colors.includes('#fff6e2'),'closed lips hide fangs');
 });
 test('teeth estimate responds to bright neutral mouth pixels rather than red lips',()=>{
     const ctx=canvasContext();const data=new Uint8ClampedArray(48*32*4);

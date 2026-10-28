@@ -7,7 +7,7 @@ import { drawFilter } from '../spooky-filters.mjs';
 
 test('start, countdown, scoring, replay, and stop work through the page controls', async()=>{
     const elements=new Map();let now=0, stopped=0;
-    const graphics=new Proxy({getImageData:()=>({data:new Uint8ClampedArray(48*32*4)})},{get:(t,k)=>t[k]??(()=>{})});
+    const graphics=new Proxy({getImageData:()=>({data:new Uint8ClampedArray(48*32*4)}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(t,k)=>t[k]??(()=>{})});
     function element(id) {
         if(!elements.has(id)) elements.set(id,{value:id==='faceFilter'?'none':0,textContent:'',disabled:false,hidden:true,
             events:{},dataset:{},addEventListener(name,fn){this.events[name]=fn;},getContext:()=>graphics,

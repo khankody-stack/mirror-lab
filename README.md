@@ -59,6 +59,12 @@ teeth and eyes contribute the remaining 500.
 
 Vampire, Possessed, and Jack-o'-lantern canvas filters follow the face; they do
 not modify the raw video used for scoring. No camera frames are uploaded.
+Eye effects are clipped to tracked eyelid contours, and vampire irises follow
+the tracked iris centers. Fangs are shaded and clipped inside the opening mouth.
+Possessed makeup adds cloudy eyes and branching cheek veins. Pumpkin makeup
+uses the face outline, translucent shading, curved ribs, and carved mouth details.
+Textures are deterministic so they do not flicker between frames. All artwork
+is drawn locally without additional image downloads.
 The HTML declares UTF-8 to prevent garbled Halloween symbols.
 
 Run checks with Node 22+: `node --test tests/*.test.mjs`.
