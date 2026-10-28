@@ -52,6 +52,12 @@ test('start, countdown, scoring, replay, and stop work through the page controls
     assert.equal(element('gameMouth').value,0);
     assert.equal(element('gameEyes').value,0);
     assert.equal(element('eyesRelaxedBtn').disabled,true);
+    context.fakeResults={faceLandmarks:[face],faceBlendshapes:[]};
+    for(let i=0;i<4;i++) {
+        now+=416;element('webcam').currentTime=now/1000;vm.runInContext('detectFace()',context);
+    }
+    assert.equal(element('mouthClosedBtn').disabled,false,'mouth calibration supports low frame rates');
+    assert.equal(element('eyesRelaxedBtn').disabled,false,'eye calibration supports low frame rates');
     element('gameStart').events.click();
     assert.equal(vm.runInContext('round.total',context),0);
     assert.equal(vm.runInContext('round.phase',context),'countdown');

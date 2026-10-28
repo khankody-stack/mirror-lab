@@ -69,6 +69,15 @@ test('movement window suppresses landmark jitter and resets on reacquisition',()
     assert.equal(tracker.update(facePose(face,640,480,matrix(1)),2000),0);
     assert.ok(tracker.update(facePose(face,640,480,matrix(1.3)),2100)>.9);
 });
+test('head movement remains measurable at low camera frame rates',()=>{
+    const face=faceFixture();
+    for (const step of [20,120,250,400]) {
+        const tracker=new HeadMotionTracker();
+        let score=0;
+        for(let time=0;time<=2000;time+=step) score=tracker.update(facePose(face,640,480,matrix(time/1000*1.2)),time);
+        assert.ok(Math.abs(score-(1.2-.18)/2.2)<.001,`${step}ms frame gap returned ${score}`);
+    }
+});
 test('smoothing responds consistently across camera frame rates',()=>{
     const simulate=step=>{
         const smoother=new SignalSmoother();smoother.update({eyes:0},0);

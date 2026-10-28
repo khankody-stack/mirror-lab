@@ -1,4 +1,7 @@
 const clamp = value => Math.max(0, Math.min(1, value));
+// Allow useful tracking at 2-5 FPS on CPU-bound devices, but never hold a
+// missing/stalled frame indefinitely.
+export const TRACKING_TIMEOUT_MS = 500;
 const distance = (face, a, b, width, height) => Math.hypot((face[a].x-face[b].x)*width, (face[a].y-face[b].y)*height);
 
 export function trackingIssue(face, width, height) {
@@ -59,7 +62,7 @@ export function facePose(face, width, height, matrix) {
 }
 
 export function movementScore(previous, current, dt) {
-    if (!previous || dt<=0 || dt>.2) return 0;
+    if (!previous || dt<=0 || dt>TRACKING_TIMEOUT_MS/1000) return 0;
     // Tracking jumps and reacquiring a face should not earn movement points.
     if (Math.abs(Math.log(current.size/previous.size))>.3 || Math.hypot(current.x-previous.x,current.y-previous.y)/current.size>0.7) return 0;
     let angle;
@@ -78,9 +81,11 @@ export class HeadMotionTracker {
     reset(){ this.history=[]; }
     update(pose, now) {
         const last=this.history.at(-1);
-        if (last && (now-last.time>200 || Math.abs(Math.log(pose.size/last.pose.size))>.3 || Math.hypot(pose.x-last.pose.x,pose.y-last.pose.y)/pose.size>.7)) this.reset();
+        const discontinuity=last && (now-last.time>TRACKING_TIMEOUT_MS || Math.abs(Math.log(pose.size/last.pose.size))>.3 || Math.hypot(pose.x-last.pose.x,pose.y-last.pose.y)/pose.size>.7);
+        if (discontinuity) this.reset();
         this.history=this.history.filter(sample=>now-sample.time<=180);
-        const previous=this.history.find(sample=>now-sample.time>=90);
+        const previous=this.history.find(sample=>now-sample.time>=90)
+            ?? (!discontinuity && last && now-last.time>=90 ? last : null);
         this.history.push({pose,time:now});
         return previous ? movementScore(previous.pose,pose,(now-previous.time)/1000) : 0;
     }
@@ -90,7 +95,7 @@ export class SignalSmoother {
     constructor(){ this.reset(); }
     reset(){ this.time=null;this.values=null; }
     update(values, now) {
-        const alpha=this.time===null || now-this.time>200 ? 1 : 1-Math.exp(-(now-this.time)/70);
+        const alpha=this.time===null || now-this.time>TRACKING_TIMEOUT_MS ? 1 : 1-Math.exp(-(now-this.time)/70);
         this.values=Object.fromEntries(Object.entries(values).map(([key,value])=>[key,this.values===null ? clamp(value) : this.values[key]+alpha*(clamp(value)-this.values[key])]));
         this.time=now;
         return {...this.values};

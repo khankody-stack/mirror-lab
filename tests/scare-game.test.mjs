@@ -28,7 +28,7 @@ test('lost face, stale tracking, and long frame gaps cannot farm points',()=>{
     assert.equal(play(20,null).total,0);
     const round=new ScareRound();round.start(0);
     round.observe(perfect,3000);round.tick(3000);round.tick(11000);
-    assert.ok(round.total<=28);
+    assert.ok(round.total<=64);
     const total=round.total;round.tick(99999);assert.equal(round.total,total);
 });
 test('a new round resets all previous results',()=>{

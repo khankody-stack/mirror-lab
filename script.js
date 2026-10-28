@@ -1,5 +1,5 @@
 
-import { ScareRound, CATEGORIES, teethVisibility, facePose, mouthOpenness, eyeOpenness, trackingIssue, normalizeExpression, HeadMotionTracker, SignalSmoother } from './scare-game.mjs';
+import { ScareRound, CATEGORIES, TRACKING_TIMEOUT_MS, teethVisibility, facePose, mouthOpenness, eyeOpenness, trackingIssue, normalizeExpression, HeadMotionTracker, SignalSmoother } from './scare-game.mjs';
 import { drawFilter } from './spooky-filters.mjs';
 
 // Keep the browser module and WASM files on the same published release.
@@ -61,8 +61,8 @@ function startGame() {
 
 function renderGame(now) {
     const busy = ['countdown', 'playing'].includes(round.phase);
-    const live = running && round.metrics && now-round.sampleTime<=200 ? round.metrics : null;
-    if (running && !live && mouthLastTime!==null && now-mouthLastTime>200) {
+    const live = running && round.metrics && now-round.sampleTime<=TRACKING_TIMEOUT_MS ? round.metrics : null;
+    if (running && !live && mouthLastTime!==null && now-mouthLastTime>TRACKING_TIMEOUT_MS) {
         resetMouthTracking();
         eyeSamples=[];
         eyesRelaxedButton.disabled=true;
@@ -90,7 +90,7 @@ function renderGame(now) {
         gameStatus.textContent = `${seconds}s left - ${live ? 'give us your scariest face!' : 'come back into view to score!'}`;
     } else if (round.phase === 'finished') {
         const title = round.total >= 750 ? 'Nightmare legend!' : round.total >= 450 ? 'Certified haunter!' : 'A little spooky - try again!';
-        gameStatus.textContent = `Round complete. ${title}`;
+        gameStatus.textContent = `Round complete. ${title} Face tracked for ${round.trackingCoverage}% of the round.${round.trackingCoverage<75 ? ' Try staying in view with brighter lighting.' : ''}`;
     }
     const scores = round.scores;
     for (const key of CATEGORIES) {
@@ -132,7 +132,8 @@ function updateGameTracking(results, now) {
     const blinking = score('eyeBlinkLeft')>0.5 || score('eyeBlinkRight')>0.5;
     if (blinking) eyeSamples = [];
     else eyeSamples.push({...eyes,time:now});
-    eyeSamples = eyeSamples.filter(sample=>now-sample.time<=500);
+    const eyeWindow=Math.max(500,Math.min(1500,(now-(signalSmoother.time??now))*3));
+    eyeSamples = eyeSamples.filter(sample=>now-sample.time<=eyeWindow);
     const ready = eyeSamples.length>=4 && now-eyeSamples[0].time>=300;
     eyesRelaxedButton.disabled = !ready;
     eyesWideButton.disabled = !ready;
@@ -154,7 +155,7 @@ function updateGameTracking(results, now) {
 
 function calibrateEyes(endpoint) {
     if (!running || ['countdown','playing'].includes(round.phase) || eyeSamples.length<4
-        || performance.now()-eyeSamples.at(-1).time>250 || eyeSamples.at(-1).time-eyeSamples[0].time<300) return;
+        || performance.now()-eyeSamples.at(-1).time>TRACKING_TIMEOUT_MS || eyeSamples.at(-1).time-eyeSamples[0].time<300) return;
     const average = side => eyeSamples.reduce((sum,sample)=>sum+sample[side],0)/eyeSamples.length;
     const candidate = {left:average('left'),right:average('right')};
     // Reject unstable captures instead of calibrating during a blink or head turn.
@@ -191,7 +192,8 @@ function updateMouthMeter(score, now) {
         return;
     }
     mouthSamples.push({ score, time: now });
-    mouthSamples = mouthSamples.filter(sample => now - sample.time <= 350);
+    const mouthWindow=Math.max(350,Math.min(1500,(now-(mouthLastTime??now))*3));
+    mouthSamples = mouthSamples.filter(sample => now - sample.time <= mouthWindow);
     const ready = mouthSamples.length >= 3 && now - mouthSamples[0].time >= 200;
     mouthClosedButton.disabled = !ready;
     mouthOpenButton.disabled = !ready;
@@ -205,7 +207,7 @@ function updateMouthMeter(score, now) {
 
 function calibrateMouth(endpoint) {
     if (['countdown', 'playing'].includes(round.phase)) return;
-    if (!running || mouthSamples.length < 3 || performance.now() - mouthSamples.at(-1).time > 250) return;
+    if (!running || mouthSamples.length < 3 || performance.now() - mouthSamples.at(-1).time > TRACKING_TIMEOUT_MS) return;
     const average = mouthSamples.reduce((sum, sample) => sum + sample.score, 0) / mouthSamples.length;
     const closed = endpoint === "closed" ? average : mouthClosed;
     const open = endpoint === "open" ? average : mouthOpen;
@@ -396,12 +398,15 @@ function detectFace() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const results = faceLandmarker.detectForVideo(
             video,
-            performance.now()
+            now
         );
 
-        updateGameTracking(results, performance.now());
+        // Stamp the captured frame before synchronous inference. Using completion
+        // time here silently discards the CPU work from every scoring interval.
+        updateGameTracking(results, now);
     }
 
+    round.tick(performance.now());
     renderGame(performance.now());
     animationFrame = requestAnimationFrame(detectFace);
 }

@@ -50,6 +50,13 @@ round and releases devices. Teeth estimates depend on lighting and are not a
 trained teeth classifier. Move comfortably; vigorous movement is not necessary.
 Microphone loudness remains a separate optional meter.
 
+Frame capture timestamps include synchronous inference time in the scoring
+interval, so a slow CPU does not discard most of the round. Head movement also
+supports frame gaps up to 500 ms. Signals expire after 500 ms without a new
+frame, and tracking loss clears them immediately. Results report the percentage
+of the round with usable tracking. Mouth and head together can earn 500 points;
+teeth and eyes contribute the remaining 500.
+
 Vampire, Possessed, and Jack-o'-lantern canvas filters follow the face; they do
 not modify the raw video used for scoring. No camera frames are uploaded.
 The HTML declares UTF-8 to prevent garbled Halloween symbols.
