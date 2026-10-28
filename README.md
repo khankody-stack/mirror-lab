@@ -74,3 +74,28 @@ left and scare meters on the right. Settings in the top right contains mouth
 and eye calibration, microphone controls, and instructions; press Escape to close it.
 On phones the meters stack below the camera and filter strip. Video and overlay
 use matching aspect-preserving sizing so filters stay aligned when resized.
+
+## Shared top 10
+
+Top 10 opens the Hall of Frights shared by all visitors. A finished round that
+qualifies opens a name form. Names and scores become public only after Save My
+Score; Skip or Escape dismisses the entry. Scores are sorted descending, with
+earlier entries winning ties. The server rechecks the cutoff when saving.
+
+`worker.mjs` handles `/api/rounds` and `/api/leaderboard`; the rest of the site is
+served through the ASSETS binding. The SQLite-backed `Leaderboard` Durable
+Object stores one global top ten, surviving browser reloads and deployments.
+Wrangler's `leaderboard-v1` migration provisions it on deployment; no separate
+D1 database ID or browser storage is needed. Keep that migration and class name
+stable on future deployments to preserve scores.
+
+Run the full app locally with `npx wrangler@4.154.0 dev`. A Python static server
+still previews the mirror but cannot host the shared API; rounds there are
+practice only. API outages also allow practice rounds and clearly mark them as
+unranked. Failed saves can be retried without creating duplicate entries.
+
+Round tickets expire after 15 minutes, cannot be submitted before the 11-second
+countdown and game duration, and can be used only once. Server validation checks
+name length, score ranges, category totals, and rate limits. Scores are computed
+in the browser, so these checks are not proof of genuine camera performance.
+No face images, audio, or landmarks are submitted to the leaderboard.

@@ -5,3 +5,7 @@
 tests/
 README.md
 wrangler.jsonc
+worker.mjs
+.wrangler/
+node_modules/
+package*.json

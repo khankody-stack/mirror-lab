@@ -12,6 +12,7 @@
     <header class="topbar">
         <div class="brand"><span class="eyebrow">Mirror Lab</span><h1>The Haunted Mirror</h1></div>
         <p id="status" role="status">Loading MediaPipe...</p>
+        <button id="leaderboardBtn" class="secondary">Top 10</button>
         <details class="settings" id="settingsPanel">
             <summary>Settings <span aria-hidden="true">&#9881;</span></summary>
             <div class="settings-content">
@@ -74,6 +75,7 @@
             <div><div class="meter-heading"><label for="gameEyes">Eyes wide open</label><output id="scoreEyes">0 / 250</output></div><meter id="gameEyes" min="0" max="100" value="0"></meter><small id="levelEyes">0% intensity</small></div>
         </div>
         <button id="gameStart" disabled>Start Scare Round</button>
+        <p id="leaderboardNotice" class="leaderboard-notice" role="status">Finish a round to enter the shared top 10.</p>
         <section class="live-meters" aria-label="Live meters">
             <span class="eyebrow">Live readings</span>
             <div class="meter-heading"><label for="mouthMeter">Mouth opening</label><output id="mouthValue">0.0%</output></div>
@@ -95,6 +97,19 @@
         </div>
     </fieldset>
 </main>
+<dialog id="leaderboardDialog" aria-labelledby="leaderboardTitle">
+    <div class="leaderboard-header"><div><span class="eyebrow">Shared top 10</span><h2 id="leaderboardTitle">Hall of Frights</h2></div><button id="closeLeaderboardBtn" class="quiet" aria-label="Close top scores">Close</button></div>
+    <form id="scoreForm" hidden>
+        <h3>You made the top 10!</h3>
+        <p>Your score: <strong id="qualifyingScore">0</strong> / 1000</p>
+        <label for="playerName">Your name</label>
+        <input id="playerName" name="playerName" maxlength="24" autocomplete="nickname" required placeholder="Your haunting name">
+        <p class="public-name-note">Your name and score will be visible to everyone.</p>
+        <div class="score-form-actions"><button id="saveScoreBtn" type="submit">Save My Score</button><button id="skipScoreBtn" class="quiet" type="button">Skip</button></div>
+    </form>
+    <p id="leaderboardStatus" role="status">Loading shared scores...</p>
+    <table class="leaderboard-table"><caption class="visually-hidden">Top ten scare scores across all visitors</caption><thead><tr><th scope="col">Rank</th><th scope="col">Name</th><th scope="col">Score</th></tr></thead><tbody id="leaderboardRows"></tbody></table>
+</dialog>
 <script type="module" src="script.js"></script>
 </body>
 </html>

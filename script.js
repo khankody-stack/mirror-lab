@@ -1,6 +1,7 @@
 
 import { ScareRound, CATEGORIES, TRACKING_TIMEOUT_MS, teethVisibility, facePose, mouthOpenness, eyeOpenness, trackingIssue, normalizeExpression, HeadMotionTracker, SignalSmoother } from './scare-game.mjs';
 import { drawFilter } from './spooky-filters.mjs';
+import { createLeaderboard } from './leaderboard-client.mjs';
 
 // Keep the browser module and WASM files on the same published release.
 const MEDIAPIPE_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21";
@@ -51,16 +52,31 @@ let eyesWideCalibrated = false;
 let eyeSamples = [];
 let teethLevel = 0;
 let lastTeethTime = -Infinity;
+const leaderboard=createLeaderboard();
+let startingRound=false;
+let gameRequest=0;
+let handledFinish=false;
 
-function startGame() {
-    if (!running || ['countdown', 'playing'].includes(round.phase)) return;
-    round.start(performance.now());
-    motionTracker.reset();
+async function startGame() {
+    if (!running || startingRound || ['countdown', 'playing'].includes(round.phase)) return;
+    const request=++gameRequest;
+    startingRound=true;
+    gameStatus.textContent='Preparing your scare round...';
     renderGame(performance.now());
+    try {
+        await leaderboard.begin();
+        if(request!==gameRequest || !running)return;
+        round.start(performance.now());
+        handledFinish=false;
+        motionTracker.reset();
+    } finally {
+        if(request===gameRequest){startingRound=false;renderGame(performance.now());}
+    }
 }
 
 function renderGame(now) {
-    const busy = ['countdown', 'playing'].includes(round.phase);
+    const busy = startingRound || ['countdown', 'playing'].includes(round.phase);
+    document.getElementById('leaderboardBtn').disabled=busy;
     const live = running && round.metrics && now-round.sampleTime<=TRACKING_TIMEOUT_MS ? round.metrics : null;
     if (running && !live && mouthLastTime!==null && now-mouthLastTime>TRACKING_TIMEOUT_MS) {
         resetMouthTracking();
@@ -91,6 +107,7 @@ function renderGame(now) {
     } else if (round.phase === 'finished') {
         const title = round.total >= 750 ? 'Nightmare legend!' : round.total >= 450 ? 'Certified haunter!' : 'A little spooky - try again!';
         gameStatus.textContent = `Round complete. ${title} Face tracked for ${round.trackingCoverage}% of the round.${round.trackingCoverage<75 ? ' Try staying in view with brighter lighting.' : ''}`;
+        if(!handledFinish && !startingRound){handledFinish=true;void leaderboard.complete(round.total,round.scores);}
     }
     const scores = round.scores;
     for (const key of CATEGORIES) {
@@ -413,6 +430,9 @@ function detectFace() {
 
 // Stop webcam
 function stopCamera() {
+    gameRequest++;
+    startingRound=false;
+    if(round.phase!=='finished')leaderboard.cancel();
     if (round.phase !== 'finished') round.reset();
     motionTracker.reset();
     signalSmoother.reset();
@@ -444,7 +464,7 @@ function stopCamera() {
 }
 
 document.getElementById("startBtn")
-    .addEventListener("click", async () => { await startCamera(); startGame(); });
+    .addEventListener("click", async () => { await startCamera(); await startGame(); });
 gameButton.addEventListener('click', startGame);
 previewButton.addEventListener('click', startCamera);
 
@@ -459,7 +479,10 @@ eyesRelaxedButton.addEventListener('click',()=>calibrateEyes('relaxed'));
 eyesWideButton.addEventListener('click',()=>calibrateEyes('wide'));
 window.addEventListener("pagehide", stopCamera);
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && ['countdown', 'playing'].includes(round.phase)) {
+    if (document.hidden && (startingRound || ['countdown', 'playing'].includes(round.phase))) {
+        gameRequest++;
+        startingRound=false;
+        leaderboard.cancel();
         round.reset();
         gameStatus.textContent = 'Round cancelled while the tab was hidden. Start a new round to play.';
         renderGame(performance.now());

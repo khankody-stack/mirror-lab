@@ -14,7 +14,7 @@ test('start, countdown, scoring, replay, and stop work through the page controls
             videoWidth:640,videoHeight:480,readyState:2,currentTime:0,async play(){}});
         return elements.get(id);
     }
-    const context=vm.createContext({...scoring,drawFilter,console,Float32Array,
+    const context=vm.createContext({...scoring,drawFilter,console,Float32Array,createLeaderboard:()=>({async begin(){},complete(){},cancel(){}}),
         document:{getElementById:element,querySelector:()=>({value:'none'}),createElement:()=>({getContext:()=>graphics}),addEventListener(){}},
         window:{addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){stopped++;}}]})}},
         requestAnimationFrame:()=>1,cancelAnimationFrame(){},performance:{now:()=>now}});
@@ -58,7 +58,7 @@ test('start, countdown, scoring, replay, and stop work through the page controls
     }
     assert.equal(element('mouthClosedBtn').disabled,false,'mouth calibration supports low frame rates');
     assert.equal(element('eyesRelaxedBtn').disabled,false,'eye calibration supports low frame rates');
-    element('gameStart').events.click();
+    await element('gameStart').events.click();
     assert.equal(vm.runInContext('round.total',context),0);
     assert.equal(vm.runInContext('round.phase',context),'countdown');
     element('stopBtn').events.click();
